@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce every claim in the DRIFT polar-motion calibration paper.
+"""Reproduce every claim in the DRIFT polar-motion calibration paper, with assertions.
 
 Default: loads the dated snapshot in data/ (2026-11-24). Use --live to fetch
 the DRIFT endpoint instead. Prints diagnostics, epoch rates with block-bootstrap
@@ -98,17 +98,19 @@ def sequential(t, xx, yy):
     cpy, *_ = np.linalg.lstsq(Pm, ry, rcond=None)
     return xx - Pm @ cpx, yy - Pm @ cpy
 
-def boot(t, xx, yy, a, b, nboot=500, block=365):
+def boot(t, xx, yy, a, b, nboot=3000, block=730, seed=0):
+    """Block bootstrap with 2-year blocks (~730 samples), seeded per call."""
     m = (t >= a) & (t < b)
     tt, ax, ay = t[m], xx[m], yy[m]
     L = len(tt)
+    rng = np.random.default_rng(seed)
     rates = []
     for _ in range(nboot):
-        starts = np.random.randint(0, max(1, L - block), size=max(1, L // block))
+        starts = rng.integers(0, max(1, L - block), size=max(1, L // block))
         sel = []
         for s in starts:
             sel.extend(range(s, min(s + block, L)))
-        if len(sel) < 30:
+        if len(sel) < 60:
             continue
         A = np.vstack([np.ones(len(sel)), tt[sel]]).T
         cx, *_ = np.linalg.lstsq(A, ax[sel], rcond=None)
@@ -138,7 +140,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", action="store_true")
     args = ap.parse_args()
-    np.random.seed(42)
 
     print("=== DATA ===")
     store = {}
@@ -154,16 +155,22 @@ def main():
     s = store["finals"]
     t, te = s["t"], s["t"][-1]
     raw = slope(t, s["xp"], s["yp"], te - 4.12, te)[2]
-    cofit = one_basis(t, s["xp"], s["yp"])
+    cofit = one_basis(t, s["xp"], s["yp"])   # whole-record co-fit
     sx_seq, sy_seq = sequential(t, s["xp"], s["yp"])
     seq = slope(t, sx_seq, sy_seq, te - 4.12, te)[2]
     sm = slope(t, s["sx"], s["sy"], te - 4.12, te)[2]
     interior = slope(t, s["sx"], s["sy"], te - 4.12, te - 2.0)[2]
     print("raw burst slope          ", round(raw, 1), "mas/yr")
-    print("corrected co-fit (years) ", round(cofit, 1), "mas/yr")
+    print("corrected co-fit (whole record)", round(cofit, 1), "mas/yr")
     print("sequential sinusoid      ", round(seq, 1), "mas/yr")
     print("smoothed burst           ", round(sm, 1), "mas/yr")
     print("smoothed interior (excl last 2 yr)", round(interior, 1), "mas/yr")
+    assert 18.0 <= raw <= 22.0, "raw burst example out of scatter range"
+    assert abs(cofit - 3.2) <= 0.1, "whole-record co-fit mismatch"
+    assert abs(seq - 10.7) <= 0.5, "sequential sinusoid mismatch"
+    assert abs(sm - 5.9) <= 0.1, "smoothed burst mismatch"
+    assert abs(interior - 3.8) <= 0.3, "interior variant mismatch"
+    print("assertions passed: raw, co-fit, sequential, smoothed, interior")
 
     print("\n=== EPOCH RATES + BOOTSTRAP CI ===")
     for ds in SNAPSHOT:
@@ -174,9 +181,11 @@ def main():
                    ("burst", te - 4.12, te)]
         for lbl, a, b in windows:
             dx, dy, rm, lon = slope(t, s["sx"], s["sy"], a, b)
-            bv = boot(t, s["sx"], s["sy"], a, b)
+            seed = int(hashlib.sha256((ds + ":" + lbl).encode()).hexdigest()[:8], 16)
+            bv = boot(t, s["sx"], s["sy"], a, b, seed=seed)
             lo, hi = np.percentile(bv, 2.5), np.percentile(bv, 97.5)
-            print(ds, lbl, "rate", round(rm, 1), "mas/yr",
+            print(ds, lbl, "bx", round(dx, 1), "by", round(dy, 1),
+                  "rate", round(rm, 1), "mas/yr",
                   "cm/yr", round(mas2cm(rm), 1),
                   "CI", round(lo, 1), "-", round(hi, 1),
                   "az", round(lon, 1))
@@ -195,6 +204,8 @@ def main():
               "| 2022-2026 adds", round(mas2cm(burst_m) / 100, 2), "m")
 
     print("\n=== ROLLING 5-YEAR RATES (IERS finals) ===")
+    s = store["finals"]
+    t = s["t"]
     smr = rolling(t, s["sx"], s["sy"])
     rawr = rolling(t, s["xp"], s["yp"])
     print("smoothed max", round(smr[:, 1].max(), 1), "mas/yr at",
@@ -203,6 +214,9 @@ def main():
           [round(v, 1) for y, v in smr[(smr[:, 0] >= 2010) & (smr[:, 0] <= 2020)]])
     print("smoothed 2022+",
           [round(v, 1) for y, v in smr[(smr[:, 0] >= 2022)]])
+    print("raw trailing range", round(rawr[:, 1].min(), 1), "-",
+          round(rawr[:, 1].max(), 1), "mas/yr; latest",
+          round(rawr[rawr[:, 0].argmax(), 1], 1))
     print("raw 2022+",
           [round(v, 1) for y, v in rawr[(rawr[:, 0] >= 2022)]])
 
@@ -214,21 +228,24 @@ def main():
            "grey": "#999999", "sky": "#56B4E9", "vermilion": "#D55E00"}
 
     pos = yearly_means(s["years"], s["sx"], s["sy"])
+    pos_disp = pos.copy()
+    pos_disp[:, 1] -= pos[0, 1]
+    pos_disp[:, 2] -= pos[0, 2]
     fig, ax = plt.subplots(figsize=(7.4, 6.0))
     epochs = [("early era", 1973, 2006, COL["grey"]),
               ("2006-2020", 2006, 2020, COL["sky"]),
               ("Oct 2022-Nov 2026", 2023, 2027, COL["vermilion"])]
     for lbl, a, b, c in epochs:
-        seg = pos[(pos[:, 0] >= a) & (pos[:, 0] < b)]
+        seg = pos_disp[(pos_disp[:, 0] >= a) & (pos_disp[:, 0] < b)]
         ax.plot(seg[:, 1], seg[:, 2], color=c, lw=2.0,
                 marker="o", ms=3, label=lbl)
         if len(seg) >= 2:
             ax.annotate("", xy=(seg[-1, 1], seg[-1, 2]),
                         xytext=(seg[0, 1], seg[0, 2]),
                         arrowprops=dict(arrowstyle="-|>", color=c, lw=1.6))
-    ax.set_xlabel("x_pole displacement (arcsec)")
-    ax.set_ylabel("y_pole displacement (arcsec)")
-    ax.set_title("Mean-pole trajectory, yearly means of smoothed series\n"
+    ax.set_xlabel("x_pole displacement from 1973 (arcsec)")
+    ax.set_ylabel("y_pole displacement from 1973 (arcsec)")
+    ax.set_title("Mean-pole trajectory, displacement from 1973 yearly mean\n"
                  "IERS finals 1973-2026", fontsize=11)
     ax.grid(alpha=0.3, lw=0.5)
     ax.legend(loc="upper left", fontsize=8)
@@ -245,17 +262,21 @@ def main():
         s2 = store[ds]
         t2, te2, t02 = s2["t"], s2["t"][-1], s2["t"][0]
         rates, los, his = [], [], []
-        for a, b in [(t02, t02 + 33), (2010, 2020), (te2 - 4.12, te2)]:
+        for lbl, a, b in [("early", t02, t02 + 33),
+                          ("middle", 2010, 2020),
+                          ("burst", te2 - 4.12, te2)]:
             rm = slope(t2, s2["sx"], s2["sy"], a, b)[2]
-            bv = boot(t2, s2["sx"], s2["sy"], a, b)
+            seed = int(hashlib.sha256((ds + ":" + lbl).encode()).hexdigest()[:8], 16)
+            bv = boot(t2, s2["sx"], s2["sy"], a, b, seed=seed)
             rates.append(rm)
             los.append(np.percentile(bv, 2.5))
             his.append(np.percentile(bv, 97.5))
-        err = [[r - l for r, l in zip(rates, los)],
-               [h - r for r, h in zip(rates, his)]]
         ax.bar(xpos + (i - 1) * w, rates, width=w, label=ds,
-               color=cols[i], edgecolor="white", lw=0.5, yerr=err,
-               capsize=2, error_kw={"lw": 1, "ecolor": COL["grey"]})
+               color=cols[i], edgecolor="white", lw=0.5)
+        centers = xpos + (i - 1) * w
+        ax.vlines(centers, los, his, color=COL["grey"], lw=1.0)
+        ax.hlines(los, centers - 0.06, centers + 0.06, color=COL["grey"], lw=1.0)
+        ax.hlines(his, centers - 0.06, centers + 0.06, color=COL["grey"], lw=1.0)
     ax.set_xticks(xpos)
     ax.set_xticklabels(labels)
     ax.set_ylabel("secular drift rate (mas/yr)")

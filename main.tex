@@ -20,12 +20,12 @@
 \maketitle
 
 \begin{abstract}
-The Earth Orientation Parameter record carries two motions that are easily conflated: the Chandler and annual wobble, which returns on itself within metres, and the secular drift of the mean pole, which accumulates. This paper sets out a reproducible method for separating them. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width), and secular drift rates are estimated per epoch by ordinary least squares with block-bootstrap confidence intervals. The early era runs at 3.6--5.0 milliarcseconds per year (11.0--15.6 cm/yr), the middle calendar window 2010--2020 at 4.6 milliarcseconds per year (14.3 cm/yr) in all three products, and the October 2022--November 2026 window at 5.9 milliarcseconds per year (18.1 cm/yr, 7.1 in/yr, 0.59 ft/yr), with bootstrap intervals of 4.3--9.8 (finals), 3.7--8.7 (JPL) and 3.9--9.4 (C04). The products share one observational base, so their agreement is consistency, not independent corroboration. A raw daily-window slope reads 20.0 milliarcseconds per year (61.6 cm/yr); sequential sinusoid subtraction reads 10.7 milliarcseconds per year (33.1 cm/yr); both are residual-wobble inflation. A corrected one-basis co-fit with periods converted to years reads 3.2 milliarcseconds per year, consistent with the secular rate. The net mean-pole displacement is 5.94 m (19.5 ft) since 1973 in IERS finals and 7.18--7.58 m (23.6--24.9 ft) since 1962 in JPL and C04; the recent window adds about 0.74 m. The dated data snapshot, checksums, reproduction script and public repository are stated so every number can be regenerated.
+The Earth Orientation Parameter record carries two motions that are easily conflated: the Chandler and annual wobble, which returns on itself within metres, and the secular drift of the mean pole, which accumulates. This paper sets out a reproducible method for separating them. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width), and secular drift rates are estimated per epoch by ordinary least squares with block-bootstrap confidence intervals. The early era runs at 3.6--5.0 milliarcseconds per year (11.0--15.6 cm/yr), the middle calendar window 2010--2020 at 4.6 milliarcseconds per year (14.3 cm/yr) in all three products, and the October 2022--November 2026 window at 5.9 milliarcseconds per year (18.1 cm/yr, 7.1 in/yr, 0.59 ft/yr), with bootstrap intervals of 3.6--8.6 (finals), 3.7--8.6 (JPL) and 3.7--8.6 (C04). The intervals overlap across epochs, so the point estimates do not establish a monotonic trend. The products share one observational base, so their agreement is consistency, not independent corroboration. A raw daily-window slope of 20.0 milliarcseconds per year (61.6 cm/yr) is one example of raw scatter: trailing raw slopes range 1.5--22.8 milliarcseconds per year and read 5.0 at the series end. Sequential sinusoid subtraction reads 10.7 milliarcseconds per year (33.1 cm/yr); both are residual-wobble inflation. A whole-record one-basis co-fit with periods converted to years reads 3.2 milliarcseconds per year, consistent with the early-era rate. The net mean-pole displacement is 5.94 m (19.5 ft) since 1973 in IERS finals and 7.18--7.58 m (23.6--24.9 ft) since 1962 in JPL and C04; the recent window adds about 0.74 m in the yearly-mean estimate, which includes the truncated end. The dated data snapshot, checksums, reproduction script and public repository are stated so every number can be regenerated.
 \end{abstract}
 
 \section{Purpose and scope}
 
-Polar motion is measured as the displacement of the Earth's rotation pole over the surface, reported as $x_{\text{pole}}$ and $y_{\text{pole}}$ in arcseconds. Two components sit in that record: the Chandler wobble (period near 432.9 days) and the annual wobble (365.2425 days), both returning on themselves within metres, and a secular drift that accumulates over decades. A rate computed from a short window without suppressing the wobble inflates the secular drift roughly threefold. This paper calibrates the secular component, states the failure modes and the edge limitations explicitly, and provides the snapshot, script and repository needed to reproduce every number.
+Polar motion is measured as the displacement of the Earth's rotation pole over the surface, reported as $x_{\text{pole}}$ and $y_{\text{pole}}$ in arcseconds. Two components sit in that record: the Chandler wobble (period near 432.9 days) and the annual wobble (365.2425 days), both returning on themselves within metres, and a secular drift that accumulates over decades. A rate computed from a short window without suppressing the wobble inflates the secular drift: the raw example is about 3.4 times the smoothed rate and sequential subtraction about 1.8 times. This paper calibrates the secular component, states the failure modes and the edge limitations explicitly, and provides the snapshot, script and repository needed to reproduce every number.
 
 The scope is the observed record and its calibration. No mechanism, coupling, or causal claim is made or tested here. Surface mass redistribution provides the physical context for polar motion \cite{adhikari}, but that context is not tested in this paper.
 
@@ -64,15 +64,15 @@ A rate $r$ in mas/yr therefore maps to surface drift as $r \times 3.09$ cm/yr. R
 
 \subsection{Period units}
 
-The wobble periods are quoted in days: annual 365.2425, semiannual 182.6211, Chandler 432.9. The time axis of the record is in years, so a sinusoid frequency must use periods in years: 1.0, 0.5 and 432.9/365.2425 $\approx$ 1.185. A one-basis least-squares fit of constant, linear trend and those sinusoids returns 3.2 mas/yr (9.9 cm/yr), consistent with the secular rate.
+The wobble periods are quoted in days: annual 365.2425, semiannual 182.6211, Chandler 432.9. The time axis of the record is in years, so a sinusoid frequency must use periods in years: 1.0, 0.5 and 432.9/365.2425 $\approx$ 1.185. A one-basis least-squares fit of constant, linear trend and those sinusoids over the whole record returns 3.2 mas/yr (9.9 cm/yr), consistent with the early-era rate. This is a whole-record secular estimate, not a burst-window value.
 
 \subsection{Residual wobble and the raw window}
 
-Sequential sinusoid subtraction --- fit the linear trend first, then fit harmonics to the residual and subtract them --- leaves residual Chandler and annual leakage because amplitude and phase drift across the record. A daily-window slope over the recent window then reads 10.7 mas/yr (33.1 cm/yr), roughly twofold the smoothed secular rate. A raw daily-window slope reads 20.0 mas/yr (61.6 cm/yr). Both are wobble inflation, not secular acceleration.
+Sequential sinusoid subtraction --- fit the linear trend first, then fit harmonics to the residual and subtract them --- leaves residual Chandler and annual leakage because amplitude and phase drift across the record. A daily-window slope over the recent window then reads 10.7 mas/yr (33.1 cm/yr), roughly twofold the smoothed secular rate. A raw daily-window slope reads 20.0 mas/yr (61.6 cm/yr) in this one window, but raw trailing slopes swing from 1.5 to 22.8 mas/yr and read 5.0 at the series end; 20.0 is one example of that scatter, not the raw secular rate. Both raw and sequential values are wobble inflation.
 
 \begin{table}[ht]
 \centering
-\caption{Method contrast on the IERS finals October 2022--November 2026 window. The corrected co-fit is consistent; the raw and sequential rows show wobble inflation; the smoothed row is the secular estimate, with its edge variant.}
+\caption{Method contrast on the IERS finals October 2022--November 2026 window. The whole-record co-fit is context; the raw and sequential rows show wobble inflation; the smoothed row is the secular estimate, with its edge variant.}
 \label{tab:contrast}
 \small
 \resizebox{\textwidth}{!}{%
@@ -80,11 +80,11 @@ Sequential sinusoid subtraction --- fit the linear trend first, then fit harmoni
 \toprule
 Method & Rate (mas/yr) & Rate (cm/yr) & Status \\
 \midrule
-Raw daily-window slope & 20.0 & 61.6 & Residual wobble present \\
-Corrected one-basis co-fit & 3.2 & 9.9 & Consistent, periods in years \\
+Raw daily-window slope & 20.0 & 61.6 & One example of raw scatter (range 1.5--22.8) \\
+Whole-record one-basis co-fit & 3.2 & 9.9 & Whole-record rate, periods in years \\
 Sequential sinusoid subtraction & 10.7 & 33.1 & Residual wobble leakage \\
-Centered smoothing (full window) & 5.9 & 18.1 & Secular estimate, CI 4.3--9.8 \\
-Centered smoothing (interior, excl last 2 yr) & 3.8 & 11.7 & Edge-truncation variant \\
+Centered smoothing (full window) & 5.9 & 18.1 & Secular estimate, CI 3.6--8.6 \\
+Centered smoothing (interior, excl last 2 yr) & 3.8 & 11.7 & Edge variant, ~2.1-yr window; noisy \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -95,7 +95,7 @@ The suppressor is a centered moving average over half-window two years either si
 \begin{equation}
 S(t_i) = \frac{1}{N_i} \sum_{j:\,|t_j - t_i| \le 2\text{ yr}} x_j .
 \end{equation}
-The full width is four years; the Chandler period is 432.9 days, about 1.186 years, and a four-year width spans multiple Chandler cycles, averaging out the annual and semiannual components. Two limits are stated explicitly. First, samples within two years of either end of the series use truncated windows: annual leakage appears there because the width is no longer an integer number of years, and Chandler suppression is imperfect even in the interior. Second, the burst window ends at the series end, so its last two years carry truncated windows. Fitting only samples at least two years from the end gives 3.8 mas/yr (11.7 cm/yr), below the full-window 5.9 mas/yr (18.1 cm/yr). The burst rate is therefore sensitive to the edge; agreement across products does not test this, because all three share the same edge.
+The full width is four years; the Chandler period is 432.9 days, about 1.186 years, and a four-year width spans multiple Chandler cycles, averaging out the annual and semiannual components. Two limits are stated explicitly. First, samples within two years of either end of the series use truncated windows: annual leakage appears there because the width is no longer an integer number of years, and Chandler suppression is imperfect even in the interior. Second, the burst window ends at the series end, so its last two years carry truncated windows. Fitting only samples at least two years from the end gives 3.8 mas/yr (11.7 cm/yr), below the full-window 5.9 mas/yr (18.1 cm/yr); that interior check spans about 2.1 years, under two Chandler cycles, so it is a noisy variant rather than a clean estimate. The burst rate is therefore sensitive to the edge; agreement across products does not test this, because all three share the same edge.
 
 \section{Epoch definition and rate estimation}
 
@@ -105,7 +105,7 @@ Within each window a linear model $x(t) = a + bt$ is fitted by ordinary least sq
 \begin{equation}
 r = \sqrt{(b_x \times 10^3)^2 + (b_y \times 10^3)^2}.
 \end{equation}
-Uncertainty is estimated by a block bootstrap: one-year blocks of the smoothed series are resampled with replacement, 500 replicates are fitted, and the 2.5th and 97.5th percentiles are reported. The smoothed series is autocorrelated, so these intervals are approximate and do not carry the assumptions of ordinary least-squares standard errors.
+Uncertainty is estimated by a block bootstrap: 2-year blocks (~730 samples) of the smoothed series are resampled with replacement, 3000 replicates are fitted with a per-call seed, and the 2.5th and 97.5th percentiles are reported. The smoothed series is autocorrelated, and the bootstrap does not capture the systematic edge bias, so these intervals are approximate and do not carry the assumptions of ordinary least-squares standard errors.
 
 The drift longitude uses the east-positive convention:
 \begin{equation}
@@ -125,22 +125,22 @@ where $\lambda$ is measured eastward from Greenwich and negative values denote w
 \toprule
 Dataset & Epoch & $b_x$ & $b_y$ & Rate (mas/yr) & Bootstrap CI & cm/yr & Azimuth \\
 \midrule
-IERS finals & Early (1973--2006) & 1.0 & 3.4 & 3.6 & 3.3--3.9 & 11.0 & $-73.6$ \\
-IERS finals & Middle (2010--2020) & 4.3 & 1.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.7$ \\
-IERS finals & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 4.3--9.8 & 18.1 & $-50.1$ \\
-JPL EOP2 & Early (1962--1995) & 2.3 & 4.1 & 4.7 & 4.5--5.0 & 14.5 & $-61.1$ \\
-JPL EOP2 & Middle (2010--2020) & 4.4 & 0.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.8$ \\
-JPL EOP2 & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.7 & 18.1 & $-50.2$ \\
-C04/IAU2000A & Early (1962--1995) & 2.0 & 4.6 & 5.0 & 4.9--5.3 & 15.6 & $-66.1$ \\
-C04/IAU2000A & Middle (2010--2020) & 4.4 & 0.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.7$ \\
-C04/IAU2000A & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.9--9.4 & 18.1 & $-50.2$ \\
+IERS finals & Early (1973--2006) & 1.0 & 3.4 & 3.6 & 3.1--4.0 & 11.0 & $-73.6$ \\
+IERS finals & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.2 & 14.3 & $-26.7$ \\
+IERS finals & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.6--8.6 & 18.1 & $-50.1$ \\
+JPL EOP2 & Early (1962--1995) & 2.3 & 4.1 & 4.7 & 4.5--5.2 & 14.5 & $-61.1$ \\
+JPL EOP2 & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.1 & 14.3 & $-26.8$ \\
+JPL EOP2 & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.2$ \\
+C04/IAU2000A & Early (1962--1995) & 2.0 & 4.6 & 5.0 & 4.8--5.4 & 15.6 & $-66.1$ \\
+C04/IAU2000A & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.1 & 14.3 & $-26.7$ \\
+C04/IAU2000A & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.2$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 \begin{table}[ht]
 \centering
-\caption{Net mean-pole displacement from the smoothed yearly-mean positions, measured from the first yearly mean to the last, with the recent-window addition.}
+\caption{Net mean-pole displacement from the smoothed yearly-mean positions, measured from the first yearly mean to the last, with the recent-window addition. The 2022--2026 increment uses yearly means that include the truncated end, so it likely carries the same upward edge bias and is approximate.}
 \label{tab:net}
 \begin{tabular}{llrrr}
 \toprule
@@ -156,28 +156,28 @@ C04/IAU2000A & 1962--2026 & 7.58 & 24.9 & 0.74 \\
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig1_trajectory.pdf}
-\caption{Mean-pole trajectory from yearly means of the smoothed IERS finals series, 1973--2026. Epoch segments are coloured and arrows mark net displacement within each epoch; the early drift longitude is about $-73.6$ degrees (west).}
+\caption{Mean-pole trajectory plotted as displacement from the 1973 first yearly mean of the smoothed IERS finals series, 1973--2026. Epoch segments are coloured and arrows mark net displacement within each epoch; the early drift longitude is about $-73.6$ degrees (west).}
 \label{fig:trajectory}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig2_epoch_rates.pdf}
-\caption{Secular drift rate per epoch with block-bootstrap intervals for IERS finals, JPL EOP2 and C04. The burst window reads 5.9 mas/yr (18.1 cm/yr) in all three products, with intervals 4.3--9.8, 3.7--8.7 and 3.9--9.4; the early-era spread reflects the different record spans (1973 versus 1962 starts).}
+\caption{Secular drift rate per epoch with block-bootstrap intervals for IERS finals, JPL EOP2 and C04. The burst window reads 5.9 mas/yr (18.1 cm/yr) in all three products, with intervals 3.6--8.6, 3.7--8.6 and 3.7--8.6; the early-era spread reflects the different record spans (1973 versus 1962 starts).}
 \label{fig:rates}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig3_rolling_rate.pdf}
-\caption{Trailing five-year secular rate for the raw series versus the centered smoothed series, IERS finals. Raw short-window slopes spike to about 22.8 mas/yr (maximum at 2009) from wobble; the smoothed series peaks near 8.6 mas/yr at 2011 and its trailing values in 2022--2026 fall to 3.1--4.7 mas/yr, below the full-window burst estimate of 5.9. The burst figure is therefore sensitive to window choice, and the early--middle--burst ordering is not a monotonic trend supported by this rolling series.}
+\caption{Trailing five-year secular rate for the raw series versus the centered smoothed series, IERS finals. Raw short-window slopes swing from 1.5 to 22.8 mas/yr (maximum at 2009) and read 5.0 at the series end; the smoothed series peaks near 8.6 mas/yr at 2011 and its trailing values in 2022--2026 fall to 3.1--4.7 mas/yr, below the full-window burst estimate of 5.9. The point estimates 3.6, 4.6 and 5.9 are monotonic, but their intervals overlap and this rolling series does not support a trend; the burst figure is sensitive to window choice.}
 \label{fig:rolling}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig4_cumulative.pdf}
-\caption{Cumulative net mean-pole displacement from smoothed yearly means, IERS finals 1973--2026. The total is 5.94 m (19.5 ft); the 2022--2026 yearly-mean increment is 0.74 m.}
+\caption{Cumulative net mean-pole displacement from smoothed yearly means, IERS finals 1973--2026. The total is 5.94 m (19.5 ft); the 2022--2026 yearly-mean increment is 0.74 m, which includes the truncated end and is approximate.}
 \label{fig:cumulative}
 \end{figure}
 
@@ -210,23 +210,25 @@ C04/IAU2000A & \texttt{eop\_c04\_2026-11-24.json} & \texttt{f9e834b008fb696152f2
 \end{tabular}}
 \end{table}
 
-The full package --- paper source, PDF, figures, snapshot and script --- is published at \url{https://github.com/nobulart/polar-motion.git} \cite{repo}. The script verifies each snapshot's checksum at load. Figure font embedding uses PDF font type 42, verified with \texttt{pdffonts} to carry no Type-3 rows. The paper builds with \texttt{tectonic main.tex} from the paper directory; figures resolve under \texttt{figures/} through the \texttt{graphicspath} declaration.
+The full package --- paper source, PDF, figures, snapshot and script --- is published at \url{https://github.com/nobulart/polar-motion.git} \cite{repo}. The script prints assertions for the raw, whole-record co-fit, sequential, smoothed and interior values, verifies each snapshot checksum, and uses 2-year blocks with 3000 bootstrap replicates seeded per call. The \texttt{EXPECTED} hash literals are intact Python strings; the appendix listing's \texttt{breaklines} wraps them visually, not literally. Figure font embedding uses PDF font type 42, verified with \texttt{pdffonts} to carry no Type-3 rows. The paper builds with \texttt{tectonic main.tex} from the paper directory; figures resolve under \texttt{figures/} through the \texttt{graphicspath} declaration.
 
 \section{Calibration limits}
 
 \begin{enumerate}[leftmargin=*]
 \item The epoch boundaries are exploratory: a dataset-specific early window, a common 2010--2020 middle window, and a burst window defined after seeing the episode. They are not pre-registered hypotheses.
-\item Edge truncation inflates the burst estimate: the full-window smoothed rate is 5.9 mas/yr, the interior-only rate is 3.8 mas/yr. The burst figure is sensitive to window choice, and the early--middle--burst ordering is not a monotonic trend.
-\item The smoothed series is autocorrelated, so bootstrap intervals are approximate. They are not ordinary least-squares standard errors.
+\item Edge truncation inflates the burst estimate: the full-window smoothed rate is 5.9 mas/yr, the interior-only rate is 3.8 mas/yr, but that interior check spans about 2.1 years and is noisy. The point estimates (3.6, 4.6, 5.9) are monotonic; their intervals overlap and the rolling series does not support a trend.
+\item The smoothed series is autocorrelated, so bootstrap intervals are approximate; the bootstrap does not capture the systematic edge bias.
+\item The raw 20.0 mas/yr slope is one example of scatter; trailing raw slopes range 1.5--22.8 mas/yr and read 5.0 at the series end.
 \item The three products share one observational base (VLBI, GPS, SLR); identical burst values are consistency, not independent corroboration. Before 1973 the JPL and C04 series include optical astrometry with errors of tens of milliarcseconds.
 \item The rates are estimates of mean-pole drift. They do not establish coupling, mechanism, or any causal rotational claim; that remains interpretation-tier.
 \item The azimuth is signed longitude, east-positive; negative values are west. Reporting magnitudes without the sign loses the direction.
 \item The record begins in 1962 (JPL, C04) or 1973 (IERS finals). Totals extending before that span, such as a fifty-foot displacement since 1850, are not testable from this endpoint.
+\item No comparison against the IERS Conventions mean-pole model is made here; that is the next benchmark.
 \end{enumerate}
 
 \section{Conclusion}
 
-The secular mean-pole drift is small and measurable: roughly 11--16 cm/yr in the early era, 14.3 cm/yr in the common 2010--2020 window, and 18.1 cm/yr in the recent four-year window, with bootstrap intervals spanning 3.7--9.8 mas/yr across products. The products share one observational base, so agreement is consistency rather than independent corroboration. Raw and sequential-sinusoid methods inflate the recent rate to 33--62 cm/yr through residual wobble; the centered four-year smoothing reduces it, with the interior-only variant at 11.7 cm/yr. A corrected one-basis co-fit with periods in years gives 3.2 mas/yr. The net displacement since 1962/1973 is 5.94--7.58 m (19.5--24.9 ft), with the recent window adding about 0.74 m. The snapshot, checksums and script are stated in full so every number can be regenerated.
+The secular mean-pole drift is small and measurable: roughly 11--16 cm/yr in the early era, 14.3 cm/yr in the common 2010--2020 window, and 18.1 cm/yr in the recent four-year window, with bootstrap intervals spanning 3.6--8.6 mas/yr across products. The point estimates are monotonic, but their intervals overlap and the rolling series does not support a trend. The products share one observational base, so agreement is consistency rather than independent corroboration. Raw and sequential-sinusoid methods inflate the recent rate to 33--62 cm/yr through residual wobble; the centered four-year smoothing reduces it, with the interior-only variant at 11.7 cm/yr (a noisy ~2.1-year check). A whole-record one-basis co-fit with periods in years gives 3.2 mas/yr. The raw 20.0 mas/yr slope is one example of scatter; trailing raw slopes range 1.5--22.8 mas/yr and read 5.0 at the series end. The net displacement since 1962/1973 is 5.94--7.58 m (19.5--24.9 ft), with the recent window adding about 0.74 m in the yearly-mean estimate, which includes the truncated end and is approximate. The snapshot, checksums and script are stated in full so every number can be regenerated.
 
 \begin{thebibliography}{5}
 \bibitem{iers} International Earth Rotation and Reference Systems Service. Earth Orientation Parameter products: finals.all IAU1980, finals2000A IAU2000, and EOP 20u24 C04 IAU2000A. Accessed through the DRIFT dashboard endpoint, 24 November 2026.
