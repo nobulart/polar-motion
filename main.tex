@@ -1,0 +1,246 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{microtype}
+\graphicspath{{figures/}}
+\hypersetup{hidelinks}
+\lstset{basicstyle=\small\ttfamily,breaklines=true,columns=fullflexible}
+
+\title{Wobble-Suppressed Calibration of Mean-Pole Polar Motion}
+\author{Craig Stone}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The Earth Orientation Parameter record carries two motions that are easily conflated: the Chandler and annual wobble, which returns on itself within metres, and the secular drift of the mean pole, which accumulates. This paper sets out a reproducible method for separating them. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width), and secular drift rates are estimated per epoch by ordinary least squares with block-bootstrap confidence intervals. The early era runs at 3.6--5.0 milliarcseconds per year (11.0--15.6 cm/yr), the middle calendar window 2010--2020 at 4.6 milliarcseconds per year (14.3 cm/yr) in all three products, and the October 2022--November 2026 window at 5.9 milliarcseconds per year (18.1 cm/yr, 7.1 in/yr, 0.59 ft/yr), with bootstrap intervals of 4.3--9.8 (finals), 3.7--8.7 (JPL) and 3.9--9.4 (C04). The products share one observational base, so their agreement is consistency, not independent corroboration. A raw daily-window slope reads 20.0 milliarcseconds per year (61.6 cm/yr); sequential sinusoid subtraction reads 10.7 milliarcseconds per year (33.1 cm/yr); both are residual-wobble inflation. A corrected one-basis co-fit with periods converted to years reads 3.2 milliarcseconds per year, consistent with the secular rate. The net mean-pole displacement is 5.94 m (19.5 ft) since 1973 in IERS finals and 7.18--7.58 m (23.6--24.9 ft) since 1962 in JPL and C04; the recent window adds about 0.74 m. The dated data snapshot, checksums, reproduction script and public repository are stated so every number can be regenerated.
+\end{abstract}
+
+\section{Purpose and scope}
+
+Polar motion is measured as the displacement of the Earth's rotation pole over the surface, reported as $x_{\text{pole}}$ and $y_{\text{pole}}$ in arcseconds. Two components sit in that record: the Chandler wobble (period near 432.9 days) and the annual wobble (365.2425 days), both returning on themselves within metres, and a secular drift that accumulates over decades. A rate computed from a short window without suppressing the wobble inflates the secular drift roughly threefold. This paper calibrates the secular component, states the failure modes and the edge limitations explicitly, and provides the snapshot, script and repository needed to reproduce every number.
+
+The scope is the observed record and its calibration. No mechanism, coupling, or causal claim is made or tested here. Surface mass redistribution provides the physical context for polar motion \cite{adhikari}, but that context is not tested in this paper.
+
+\section{Data sources}
+
+The DRIFT dashboard serves Earth Orientation Parameter series from three products at \url{http://mac-studio:3111/api/eop?dataset=<id>}. Dataset identifiers are \texttt{finals} (IERS finals.all IAU1980, the operational default), \texttt{jpl} (JPL EOP2), and \texttt{c04} (EOP 20u24 C04 IAU2000A). The response fields used are \texttt{t}, \texttt{xp} and \texttt{yp}; unknown or omitted dataset values fall back to \texttt{finals}. Source freshness is reported by \texttt{/api/eop-source-notice}; on 24 November 2026 the default IERS product was active with latest sample 2026-11-22 and zero lag days.
+
+{\sloppy
+The upstream products are public: the IERS Earth Orientation Center at \url{https://datacenter.iers.org} and JPL EOP2 at \url{https://eop2-external.jpl.nasa.gov/eop2/latest_eop2.long}. The three products draw on the same VLBI, GPS and SLR observational base; they are different reductions of one measurement system, so agreement across them is consistency rather than independent corroboration. Before 1973 the JPL and C04 series include optical astrometry with errors of tens of milliarcseconds, comparable to the metre-scale differences in net displacement reported below.
+\par}
+
+\begin{table}[ht]
+\centering
+\caption{Series inventory pulled from the live DRIFT endpoint on 24 November 2026.}
+\label{tab:inventory}
+\begin{tabular}{lrrll}
+\toprule
+Dataset & Records & Start & End & Latest sample \\
+\midrule
+IERS finals & 19{,}683 & 1973-01-02 & 2026-11-22 & 2026-11-22 \\
+JPL EOP2 & 23{,}683 & 1962-01-20 & 2026-11-22 & 2026-11-22 \\
+C04/IAU2000A & 23{,}702 & 1962-01-01 & 2026-11-22 & 2026-11-22 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Units and surface conversion}
+
+Polar motion coordinates are reported in arcseconds. One milliarcsecond (mas) of polar motion corresponds to a surface displacement of approximately 3.09 cm, obtained from the Earth's mean radius $R = 6371$ km:
+\begin{equation}
+c_{\text{cm per mas}} = R_{\text{km}} \times 10^{5} \times \frac{10^{-3}}{206\,264.80625} \approx 3.09 \text{ cm}.
+\end{equation}
+A rate $r$ in mas/yr therefore maps to surface drift as $r \times 3.09$ cm/yr. Rates in this paper are reported in mas/yr and cm/yr, with in/yr and ft/yr where useful; one foot is 30.48 cm.
+
+\section{Wobble suppression methodology}
+
+\subsection{Period units}
+
+The wobble periods are quoted in days: annual 365.2425, semiannual 182.6211, Chandler 432.9. The time axis of the record is in years, so a sinusoid frequency must use periods in years: 1.0, 0.5 and 432.9/365.2425 $\approx$ 1.185. A one-basis least-squares fit of constant, linear trend and those sinusoids returns 3.2 mas/yr (9.9 cm/yr), consistent with the secular rate.
+
+\subsection{Residual wobble and the raw window}
+
+Sequential sinusoid subtraction --- fit the linear trend first, then fit harmonics to the residual and subtract them --- leaves residual Chandler and annual leakage because amplitude and phase drift across the record. A daily-window slope over the recent window then reads 10.7 mas/yr (33.1 cm/yr), roughly twofold the smoothed secular rate. A raw daily-window slope reads 20.0 mas/yr (61.6 cm/yr). Both are wobble inflation, not secular acceleration.
+
+\begin{table}[ht]
+\centering
+\caption{Method contrast on the IERS finals October 2022--November 2026 window. The corrected co-fit is consistent; the raw and sequential rows show wobble inflation; the smoothed row is the secular estimate, with its edge variant.}
+\label{tab:contrast}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrl}
+\toprule
+Method & Rate (mas/yr) & Rate (cm/yr) & Status \\
+\midrule
+Raw daily-window slope & 20.0 & 61.6 & Residual wobble present \\
+Corrected one-basis co-fit & 3.2 & 9.9 & Consistent, periods in years \\
+Sequential sinusoid subtraction & 10.7 & 33.1 & Residual wobble leakage \\
+Centered smoothing (full window) & 5.9 & 18.1 & Secular estimate, CI 4.3--9.8 \\
+Centered smoothing (interior, excl last 2 yr) & 3.8 & 11.7 & Edge-truncation variant \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Centered smoothing and its edge limits}
+
+The suppressor is a centered moving average over half-window two years either side of each sample:
+\begin{equation}
+S(t_i) = \frac{1}{N_i} \sum_{j:\,|t_j - t_i| \le 2\text{ yr}} x_j .
+\end{equation}
+The full width is four years; the Chandler period is 432.9 days, about 1.186 years, and a four-year width spans multiple Chandler cycles, averaging out the annual and semiannual components. Two limits are stated explicitly. First, samples within two years of either end of the series use truncated windows: annual leakage appears there because the width is no longer an integer number of years, and Chandler suppression is imperfect even in the interior. Second, the burst window ends at the series end, so its last two years carry truncated windows. Fitting only samples at least two years from the end gives 3.8 mas/yr (11.7 cm/yr), below the full-window 5.9 mas/yr (18.1 cm/yr). The burst rate is therefore sensitive to the edge; agreement across products does not test this, because all three share the same edge.
+
+\section{Epoch definition and rate estimation}
+
+The early window is $(t_0, t_0+33)$ years and is dataset-specific: 1973--2006 for IERS finals and 1962--1995 for JPL and C04. The middle window is the common calendar interval 2010--2020 for all three products, so the rates compare like intervals. The burst window is $(t_e-4.12, t_e)$, the October 2022 to November 2026 interval. The boundaries are exploratory and arbitrary; the burst window was chosen after observing the recent episode, not pre-registered.
+
+Within each window a linear model $x(t) = a + bt$ is fitted by ordinary least squares to the smoothed series. The slope $b$ is converted to mas/yr by multiplying by $10^3$. The combined drift magnitude is
+\begin{equation}
+r = \sqrt{(b_x \times 10^3)^2 + (b_y \times 10^3)^2}.
+\end{equation}
+Uncertainty is estimated by a block bootstrap: one-year blocks of the smoothed series are resampled with replacement, 500 replicates are fitted, and the 2.5th and 97.5th percentiles are reported. The smoothed series is autocorrelated, so these intervals are approximate and do not carry the assumptions of ordinary least-squares standard errors.
+
+The drift longitude uses the east-positive convention:
+\begin{equation}
+\lambda = \operatorname{atan2}(-b_y, b_x),
+\end{equation}
+where $\lambda$ is measured eastward from Greenwich and negative values denote west. The reported azimuths are signed longitudes: $-73.6$ degrees means 73.6 degrees west, not a "westward convention" that hides the sign.
+
+\section{Results}
+
+\begin{table}[ht]
+\centering
+\caption{Secular mean-pole drift rates per epoch with block-bootstrap intervals, from the centered smoothing. Azimuth is signed longitude, east-positive; negative values are west.}
+\label{tab:rates}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrr}
+\toprule
+Dataset & Epoch & $b_x$ & $b_y$ & Rate (mas/yr) & Bootstrap CI & cm/yr & Azimuth \\
+\midrule
+IERS finals & Early (1973--2006) & 1.0 & 3.4 & 3.6 & 3.3--3.9 & 11.0 & $-73.6$ \\
+IERS finals & Middle (2010--2020) & 4.3 & 1.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.7$ \\
+IERS finals & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 4.3--9.8 & 18.1 & $-50.1$ \\
+JPL EOP2 & Early (1962--1995) & 2.3 & 4.1 & 4.7 & 4.5--5.0 & 14.5 & $-61.1$ \\
+JPL EOP2 & Middle (2010--2020) & 4.4 & 0.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.8$ \\
+JPL EOP2 & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.7 & 18.1 & $-50.2$ \\
+C04/IAU2000A & Early (1962--1995) & 2.0 & 4.6 & 5.0 & 4.9--5.3 & 15.6 & $-66.1$ \\
+C04/IAU2000A & Middle (2010--2020) & 4.4 & 0.9 & 4.6 & 4.5--5.5 & 14.3 & $-26.7$ \\
+C04/IAU2000A & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.9--9.4 & 18.1 & $-50.2$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Net mean-pole displacement from the smoothed yearly-mean positions, measured from the first yearly mean to the last, with the recent-window addition.}
+\label{tab:net}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Span & Displacement (m) & Displacement (ft) & 2022--2026 adds (m) \\
+\midrule
+IERS finals & 1973--2026 & 5.94 & 19.5 & 0.74 \\
+JPL EOP2 & 1962--2026 & 7.18 & 23.6 & 0.74 \\
+C04/IAU2000A & 1962--2026 & 7.58 & 24.9 & 0.74 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig1_trajectory.pdf}
+\caption{Mean-pole trajectory from yearly means of the smoothed IERS finals series, 1973--2026. Epoch segments are coloured and arrows mark net displacement within each epoch; the early drift longitude is about $-73.6$ degrees (west).}
+\label{fig:trajectory}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig2_epoch_rates.pdf}
+\caption{Secular drift rate per epoch with block-bootstrap intervals for IERS finals, JPL EOP2 and C04. The burst window reads 5.9 mas/yr (18.1 cm/yr) in all three products, with intervals 4.3--9.8, 3.7--8.7 and 3.9--9.4; the early-era spread reflects the different record spans (1973 versus 1962 starts).}
+\label{fig:rates}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig3_rolling_rate.pdf}
+\caption{Trailing five-year secular rate for the raw series versus the centered smoothed series, IERS finals. Raw short-window slopes spike to about 22.8 mas/yr (maximum at 2009) from wobble; the smoothed series peaks near 8.6 mas/yr at 2011 and its trailing values in 2022--2026 fall to 3.1--4.7 mas/yr, below the full-window burst estimate of 5.9. The burst figure is therefore sensitive to window choice, and the early--middle--burst ordering is not a monotonic trend supported by this rolling series.}
+\label{fig:rolling}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig4_cumulative.pdf}
+\caption{Cumulative net mean-pole displacement from smoothed yearly means, IERS finals 1973--2026. The total is 5.94 m (19.5 ft); the 2022--2026 yearly-mean increment is 0.74 m.}
+\label{fig:cumulative}
+\end{figure}
+
+\section{Reproducibility}
+
+The reproduction script is \texttt{scripts/polar\_drift\_repro.py}. It loads the dated snapshot by default and reproduces the diagnostics, epoch rates with bootstrap intervals, net displacement, rolling rates and all four figures; the \texttt{--live} flag fetches the endpoint instead. Run from the paper directory:
+{\small
+\begin{verbatim}
+cd latex/papers/polar_motion_wobble_calibration
+FIGGEN=$HOME/.venvs/figgen/bin/python3
+$FIGGEN scripts/polar_drift_repro.py
+\end{verbatim}
+}
+The dated snapshot is archived under \texttt{data/} with SHA-256 checksums:
+
+\begin{table}[ht]
+\centering
+\caption{Dated data snapshot (2026-11-24) and SHA-256 checksums.}
+\label{tab:snapshot}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+Dataset & Snapshot file & SHA-256 \\
+\midrule
+IERS finals & \texttt{eop\_finals\_2026-11-24.json} & \texttt{b6baac64fd3472af806f91c1c67a834edee4e1a1ee96357515e0e86f8d2aa8c8} \\
+JPL EOP2 & \texttt{eop\_jpl\_2026-11-24.json} & \texttt{05c4546fec4f03dea8661199f8cd21aad81b4b7bc3acbd1f5167431f1edbbace} \\
+C04/IAU2000A & \texttt{eop\_c04\_2026-11-24.json} & \texttt{f9e834b008fb696152f29d9d530332ebab5085e446d6ff954b4f51092db84b44} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The full package --- paper source, PDF, figures, snapshot and script --- is published at \url{https://github.com/nobulart/polar-motion.git} \cite{repo}. The script verifies each snapshot's checksum at load. Figure font embedding uses PDF font type 42, verified with \texttt{pdffonts} to carry no Type-3 rows. The paper builds with \texttt{tectonic main.tex} from the paper directory; figures resolve under \texttt{figures/} through the \texttt{graphicspath} declaration.
+
+\section{Calibration limits}
+
+\begin{enumerate}[leftmargin=*]
+\item The epoch boundaries are exploratory: a dataset-specific early window, a common 2010--2020 middle window, and a burst window defined after seeing the episode. They are not pre-registered hypotheses.
+\item Edge truncation inflates the burst estimate: the full-window smoothed rate is 5.9 mas/yr, the interior-only rate is 3.8 mas/yr. The burst figure is sensitive to window choice, and the early--middle--burst ordering is not a monotonic trend.
+\item The smoothed series is autocorrelated, so bootstrap intervals are approximate. They are not ordinary least-squares standard errors.
+\item The three products share one observational base (VLBI, GPS, SLR); identical burst values are consistency, not independent corroboration. Before 1973 the JPL and C04 series include optical astrometry with errors of tens of milliarcseconds.
+\item The rates are estimates of mean-pole drift. They do not establish coupling, mechanism, or any causal rotational claim; that remains interpretation-tier.
+\item The azimuth is signed longitude, east-positive; negative values are west. Reporting magnitudes without the sign loses the direction.
+\item The record begins in 1962 (JPL, C04) or 1973 (IERS finals). Totals extending before that span, such as a fifty-foot displacement since 1850, are not testable from this endpoint.
+\end{enumerate}
+
+\section{Conclusion}
+
+The secular mean-pole drift is small and measurable: roughly 11--16 cm/yr in the early era, 14.3 cm/yr in the common 2010--2020 window, and 18.1 cm/yr in the recent four-year window, with bootstrap intervals spanning 3.7--9.8 mas/yr across products. The products share one observational base, so agreement is consistency rather than independent corroboration. Raw and sequential-sinusoid methods inflate the recent rate to 33--62 cm/yr through residual wobble; the centered four-year smoothing reduces it, with the interior-only variant at 11.7 cm/yr. A corrected one-basis co-fit with periods in years gives 3.2 mas/yr. The net displacement since 1962/1973 is 5.94--7.58 m (19.5--24.9 ft), with the recent window adding about 0.74 m. The snapshot, checksums and script are stated in full so every number can be regenerated.
+
+\begin{thebibliography}{5}
+\bibitem{iers} International Earth Rotation and Reference Systems Service. Earth Orientation Parameter products: finals.all IAU1980, finals2000A IAU2000, and EOP 20u24 C04 IAU2000A. Accessed through the DRIFT dashboard endpoint, 24 November 2026.
+\bibitem{jpl} Jet Propulsion Laboratory. Earth Orientation Parameters EOP2 (PMx/PMy), daily long and short products. Accessed through the DRIFT dashboard endpoint, 24 November 2026.
+\bibitem{drift} Stone, Craig (2026). \emph{DRIFT: A Constraint-First Polar Motion Dashboard}, version 1.6.5. Local dashboard at \url{http://mac-studio:3111}.
+\bibitem{adhikari} Adhikari, Surendra and Ivins, Erik R. (2016). Climate-driven polar motion: 2003--2015. \emph{Science Advances} 2(4):e1501693.
+\bibitem{repo} Stone, Craig (2026). Wobble-suppressed calibration of mean-pole polar motion: paper, figures, dated snapshot and reproduction script. Public repository at \url{https://github.com/nobulart/polar-motion.git}.
+\end{thebibliography}
+
+\appendix
+\section{Reproduction code}
+
+The complete reproduction script is included verbatim from \texttt{scripts/polar\_drift\_repro.py}:
+
+\lstinputlisting[language=Python]{scripts/polar_drift_repro.py}
+
+\end{document}
