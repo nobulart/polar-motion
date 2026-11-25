@@ -5,9 +5,10 @@ Chandler/annual wobble from the secular drift of the Earth's mean pole.
 
 ## Contents
 
-- `main.tex` / `main.pdf` --- paper source and built PDF (17 pages).
-- `figures/` --- six PDF figures (trajectory, epoch rates with bootstrap CI,
-  rolling rates, cumulative displacement, residual rates, residual-rate trajectory).
+- `main.tex` / `main.pdf` --- paper source and built PDF (18 pages).
+- `figures/` --- seven PDF figures (trajectory, epoch rates with bootstrap CI,
+  rolling rates, cumulative displacement, residual rates, residual-rate trajectory,
+  residual displacement path).
 - `data/` --- dated EOP snapshot (2026-11-24) for IERS finals, JPL EOP2 and C04,
   with SHA-256 checksums recorded in the paper.
 - `scripts/polar_drift_repro.py` --- reproduces diagnostics, epoch rates with

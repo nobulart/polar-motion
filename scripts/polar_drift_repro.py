@@ -378,6 +378,31 @@ def main():
     fig.savefig(FIGDIR + "/fig6_residual_trajectory.pdf")
     plt.close(fig)
 
+    # Fig 7 residual displacement path (increments corrected, 2003-2026)
+    pos = yearly_means(s["years"], s["sx"], s["sy"])
+    seg = pos[pos[:, 0] >= 2003]
+    inc_x = np.diff(seg[:, 1]); inc_y = np.diff(seg[:, 2])
+    kx, ky = 4.83 / 1000.0, 0.84 / 1000.0   # mas/yr -> arcsec/yr
+    cum_x = np.cumsum(inc_x - kx) * 1000.0
+    cum_y = np.cumsum(inc_y - ky) * 1000.0
+    yrs = seg[1:, 0]
+    fig, ax = plt.subplots(figsize=(7.4, 6.0))
+    epochs = [("2003-2006", 2003, 2006, COL["grey"]),
+              ("2006-2020", 2006, 2020, COL["sky"]),
+              ("Oct 2022-Nov 2026", 2023, 2027, COL["vermilion"])]
+    ax.plot(cum_x, cum_y, color=COL["grey"], lw=1.0, alpha=0.7)
+    for lbl, a, b, c in epochs:
+        mask = (yrs >= a) & (yrs < b)
+        ax.scatter(cum_x[mask], cum_y[mask], color=c, s=18, label=lbl)
+    ax.set_xlabel("residual x displacement (mas)")
+    ax.set_ylabel("residual y displacement (mas)")
+    ax.set_title("Residual displacement path after subtracting climate+GIA\n"
+                 "IERS finals, yearly increments, 2003-2026 benchmark", fontsize=11)
+    ax.grid(alpha=0.3, lw=0.5)
+    ax.legend(loc="upper left", fontsize=8)
+    fig.savefig(FIGDIR + "/fig7_residual_path.pdf")
+    plt.close(fig)
+
     fig, ax = plt.subplots(figsize=(8.2, 4.4))
     ax.plot(rawr[:, 0], rawr[:, 1], color=COL["grey"], lw=1.0,
             label="raw series")
