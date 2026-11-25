@@ -122,6 +122,26 @@ def boot(t, xx, yy, a, b, nboot=3000, block=730, seed=0):
         rates.append(math.hypot(cx[1] * 1000, cy[1] * 1000))
     return np.array(rates)
 
+def boot_vec(t, xx, yy, a, b, nboot=3000, block=730, seed=0):
+    """Block bootstrap returning bx and by separately; seed per call."""
+    m = (t >= a) & (t < b)
+    tt, ax, ay = t[m], xx[m], yy[m]
+    L = len(tt)
+    rng = np.random.default_rng(seed)
+    bx, by = [], []
+    for _ in range(nboot):
+        starts = rng.integers(0, max(1, L - block), size=max(1, L // block))
+        sel = []
+        for s in starts:
+            sel.extend(range(s, min(s + block, L)))
+        if len(sel) < 60:
+            continue
+        A = np.vstack([np.ones(len(sel)), tt[sel]]).T
+        cx, *_ = np.linalg.lstsq(A, ax[sel], rcond=None)
+        cy, *_ = np.linalg.lstsq(A, ay[sel], rcond=None)
+        bx.append(cx[1] * 1000); by.append(cy[1] * 1000)
+    return np.array(bx), np.array(by)
+
 def residual_vector(dx, dy):
     """Subtract known climate+GIA vectors; frame y toward 90 W (west => +dy)."""
     cx = CLIMATE_MAG * math.cos(math.radians(CLIMATE_DIR))
@@ -213,18 +233,27 @@ def main():
     print("\n=== RESIDUAL AFTER KNOWN SUBTRACTION ===")
     print("known climate vector 4.56 mas/yr at 27.7 deg E (+/-1.26)")
     print("known GIA vector 3.06 mas/yr at 75 deg W")
+    print("early era subtraction omitted: modern budget vs 1973-2006 is not an unexplained-motion test")
     for ds in SNAPSHOT:
         s = store[ds]
-        t, te, t0 = s["t"], s["t"][-1], s["t"][0]
-        for lbl, a, b in [("early", t0, t0 + 33),
-                          ("middle 2010-2020", 2010, 2020),
-                          ("burst", te - 4.12, te)]:
+        t, te = s["t"], s["t"][-1]
+        windows = [("middle 2010-2020", 2010, 2020),
+                   ("burst full", te - 4.12, te),
+                   ("burst interior", te - 4.12, te - 2.0)]
+        for lbl, a, b in windows:
             dx, dy, rm, lon = slope(t, s["sx"], s["sy"], a, b)
             rx, ry, rmag, raz = residual_vector(dx, dy)
-            print(ds, lbl, "observed", round(rm, 1), "residual",
-                  round(rmag, 1), "mas/yr", "az", round(raz, 1))
-    print("residual uncertainty approximate +/-1.5 mas/yr (climate uncertainty dominates)")
-    assert abs(residual_vector(3.8, 4.5)[2] - 3.8) <= 0.3, "burst residual mismatch"
+            seed = int(hashlib.sha256((ds + ":residual:" + lbl).encode()).hexdigest()[:8], 16)
+            bx, by = boot_vec(t, s["sx"], s["sy"], a, b, seed=seed)
+            rb = np.array([residual_vector(x, y)[2] for x, y in zip(bx, by)])
+            lo, hi = np.percentile(rb, 2.5), np.percentile(rb, 97.5)
+            print(ds, lbl, "observed", round(rm, 1), "residual", round(rmag, 1),
+                  "mas/yr", "CI", round(lo, 1), "-", round(hi, 1),
+                  "az", round(raz, 1))
+    print("combined uncertainty about +/-3 mas/yr or more; burst residual not distinguishable from zero")
+    s = store["finals"]
+    dx, dy, _, _ = slope(s["t"], s["sx"], s["sy"], s["t"][-1] - 4.12, s["t"][-1])
+    assert abs(residual_vector(dx, dy)[2] - 3.82) <= 0.1, "computed burst residual mismatch"
 
     print("\n=== NET DISPLACEMENT ===")
     for ds in SNAPSHOT:
@@ -324,30 +353,40 @@ def main():
     fig.savefig(FIGDIR + "/fig2_epoch_rates.pdf")
     plt.close(fig)
 
-    # Fig 5 residual after subtracting known climate+GIA vector
-    fig, ax = plt.subplots(figsize=(8.0, 4.6))
-    labels = ["early", "middle 2010-2020", "burst"]
+    # Fig 5 residual rates with vector-bootstrap residual CI; early omitted
+    fig, ax = plt.subplots(figsize=(8.2, 4.8))
+    labels = ["middle 2010-2020", "burst full", "burst interior-only"]
     xpos = np.arange(3)
-    w = 0.26
+    w = 0.24
     dslist = list(SNAPSHOT)
     cols = [COL["blue"], COL["orange"], COL["green"]]
     for i, ds in enumerate(dslist):
         s2 = store[ds]
-        t2, te2, t02 = s2["t"], s2["t"][-1], s2["t"][0]
-        rvals = []
-        for a, b in [(t02, t02 + 33), (2010, 2020), (te2 - 4.12, te2)]:
+        t2, te2 = s2["t"], s2["t"][-1]
+        rvals, los, his = [], [], []
+        for lbl, a, b in [("middle", 2010, 2020),
+                          ("burst full", te2 - 4.12, te2),
+                          ("burst interior", te2 - 4.12, te2 - 2.0)]:
             dx, dy, rm, lon = slope(t2, s2["sx"], s2["sy"], a, b)
             rvals.append(residual_vector(dx, dy)[2])
-        ax.bar(xpos + (i - 1) * w, rvals, width=w, label=ds,
+            seed = int(hashlib.sha256((ds + ":fig5:" + lbl).encode()).hexdigest()[:8], 16)
+            bx, by = boot_vec(t2, s2["sx"], s2["sy"], a, b, seed=seed)
+            rb = np.array([residual_vector(x, y)[2] for x, y in zip(bx, by)])
+            los.append(np.percentile(rb, 2.5)); his.append(np.percentile(rb, 97.5))
+        centers = xpos + (i - 1) * w
+        ax.bar(centers, rvals, width=w, label=ds,
                color=cols[i], edgecolor="white", lw=0.5)
+        ax.errorbar(centers, rvals,
+                    yerr=[np.array(rvals) - np.array(los), np.array(his) - np.array(rvals)],
+                    fmt="none", ecolor=COL["grey"], capsize=3, lw=1.0)
     ax.set_xticks(xpos)
     ax.set_xticklabels(labels)
     ax.set_ylabel("residual rate after known subtraction (mas/yr)")
-    ax.set_title("Residual after subtracting climate+GIA vectors\n"
-                 "Adhikari & Ivins 2016 benchmark", fontsize=11)
+    ax.set_title("Residual rates with vector-bootstrap CI\n"
+                 "Adhikari & Ivins 2016 benchmark; early era omitted", fontsize=11)
     ax.grid(axis="y", alpha=0.3, lw=0.5)
     ax.legend(loc="upper left", fontsize=8)
-    ax.set_ylim(0, 6)
+    ax.set_ylim(0, 8)
     fig.savefig(FIGDIR + "/fig5_residual.pdf")
     plt.close(fig)
 
@@ -382,7 +421,8 @@ def main():
     pos = yearly_means(s["years"], s["sx"], s["sy"])
     seg = pos[pos[:, 0] >= 2003]
     inc_x = np.diff(seg[:, 1]); inc_y = np.diff(seg[:, 2])
-    kx, ky = 4.83 / 1000.0, 0.84 / 1000.0   # mas/yr -> arcsec/yr
+    kx, ky = known_components()
+    kx, ky = kx / 1000.0, ky / 1000.0   # mas/yr -> arcsec/yr
     cum_x = np.cumsum(inc_x - kx) * 1000.0
     cum_y = np.cumsum(inc_y - ky) * 1000.0
     yrs = seg[1:, 0]
@@ -398,8 +438,10 @@ def main():
     ax.set_ylabel("residual y displacement (mas)")
     ax.set_title("Residual displacement path after subtracting climate+GIA\n"
                  "IERS finals, yearly increments, 2003-2026 benchmark", fontsize=11)
+    ax.set_xlim(cum_x.min() - 2, cum_x.max() + 2)
+    ax.set_ylim(cum_y.min() - 2, cum_y.max() + 3)
     ax.grid(alpha=0.3, lw=0.5)
-    ax.legend(loc="upper left", fontsize=8)
+    ax.legend(loc="lower right", fontsize=8)
     fig.savefig(FIGDIR + "/fig7_residual_path.pdf")
     plt.close(fig)
 
