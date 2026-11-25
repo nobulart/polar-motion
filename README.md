@@ -5,13 +5,14 @@ Chandler/annual wobble from the secular drift of the Earth's mean pole.
 
 ## Contents
 
-- `main.tex` / `main.pdf` --- paper source and built PDF (13 pages).
-- `figures/` --- four PDF figures (trajectory, epoch rates with bootstrap CI,
-  rolling rates, cumulative displacement).
+- `main.tex` / `main.pdf` --- paper source and built PDF (17 pages).
+- `figures/` --- six PDF figures (trajectory, epoch rates with bootstrap CI,
+  rolling rates, cumulative displacement, residual rates, residual-rate trajectory).
 - `data/` --- dated EOP snapshot (2026-11-24) for IERS finals, JPL EOP2 and C04,
   with SHA-256 checksums recorded in the paper.
 - `scripts/polar_drift_repro.py` --- reproduces diagnostics, epoch rates with
-  block-bootstrap intervals, net displacement, rolling rates and all figures.
+  block-bootstrap intervals, net displacement, rolling rates, residual subtraction
+  against the known climate+GIA budget and all figures.
 
 ## Build
 
@@ -37,6 +38,9 @@ The script loads the archived snapshot by default and verifies its checksums;
   interior-only variant 3.8 mas/yr.
 - Middle common window 2010--2020: 4.6 mas/yr in all three products.
 - Net displacement: 5.94 m (IERS finals), 7.18 m (JPL), 7.58 m (C04); recent window adds 0.74 m.
+- Residual after subtracting the Adhikari & Ivins 2016 climate reconstruction (4.56 ±1.26 mas/yr at 27.7°E)
+  and the GIA trend (3.06 mas/yr at 75°W): early 4.2--4.7, middle 1.4, burst 3.8 mas/yr along ~106°W.
+  Benchmark subtraction only; known climate values are 2003--2015 and residual uncertainty is ~±1.5 mas/yr.
 
 ## Scope
 

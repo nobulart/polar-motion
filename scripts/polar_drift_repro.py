@@ -20,6 +20,10 @@ R_KM = 6371.0
 MAS_PER_RAD = 206264806.25
 HALF = 2.0                                   # +/-2 yr => 4-year boxcar width
 PERIOD_YEARS = [1.0, 0.5, 432.9 / 365.2425]   # annual, semiannual, Chandler
+# Known contributions (Adhikari & Ivins 2016): climate reconstruction 4.56 +/- 1.26
+# mas/yr at 27.7 +/- 7.6 deg E; GIA long-term 0.85 deg/Myr = 3.06 mas/yr at 75 deg W.
+CLIMATE_MAG, CLIMATE_DIR, CLIMATE_UNC = 4.56, 27.7, 1.26
+GIA_MAG, GIA_DIR = 3.06, 75.0
 FIGDIR = "figures"
 DATADIR = "data"
 SNAPSHOT = {"finals": "eop_finals_2026-11-24.json",
@@ -118,6 +122,22 @@ def boot(t, xx, yy, a, b, nboot=3000, block=730, seed=0):
         rates.append(math.hypot(cx[1] * 1000, cy[1] * 1000))
     return np.array(rates)
 
+def residual_vector(dx, dy):
+    """Subtract known climate+GIA vectors; frame y toward 90 W (west => +dy)."""
+    cx = CLIMATE_MAG * math.cos(math.radians(CLIMATE_DIR))
+    cy = -CLIMATE_MAG * math.sin(math.radians(CLIMATE_DIR))
+    gx = GIA_MAG * math.cos(math.radians(GIA_DIR))
+    gy = GIA_MAG * math.sin(math.radians(GIA_DIR))
+    rx, ry = dx - cx - gx, dy - cy - gy
+    return rx, ry, math.hypot(rx, ry), math.degrees(math.atan2(-ry, rx))
+
+def known_components():
+    cx = CLIMATE_MAG * math.cos(math.radians(CLIMATE_DIR))
+    cy = -CLIMATE_MAG * math.sin(math.radians(CLIMATE_DIR))
+    gx = GIA_MAG * math.cos(math.radians(GIA_DIR))
+    gy = GIA_MAG * math.sin(math.radians(GIA_DIR))
+    return cx + gx, cy + gy
+
 def yearly_means(years, sx, sy):
     pos = []
     for y in np.unique(years):
@@ -189,6 +209,22 @@ def main():
                   "cm/yr", round(mas2cm(rm), 1),
                   "CI", round(lo, 1), "-", round(hi, 1),
                   "az", round(lon, 1))
+
+    print("\n=== RESIDUAL AFTER KNOWN SUBTRACTION ===")
+    print("known climate vector 4.56 mas/yr at 27.7 deg E (+/-1.26)")
+    print("known GIA vector 3.06 mas/yr at 75 deg W")
+    for ds in SNAPSHOT:
+        s = store[ds]
+        t, te, t0 = s["t"], s["t"][-1], s["t"][0]
+        for lbl, a, b in [("early", t0, t0 + 33),
+                          ("middle 2010-2020", 2010, 2020),
+                          ("burst", te - 4.12, te)]:
+            dx, dy, rm, lon = slope(t, s["sx"], s["sy"], a, b)
+            rx, ry, rmag, raz = residual_vector(dx, dy)
+            print(ds, lbl, "observed", round(rm, 1), "residual",
+                  round(rmag, 1), "mas/yr", "az", round(raz, 1))
+    print("residual uncertainty approximate +/-1.5 mas/yr (climate uncertainty dominates)")
+    assert abs(residual_vector(3.8, 4.5)[2] - 3.8) <= 0.3, "burst residual mismatch"
 
     print("\n=== NET DISPLACEMENT ===")
     for ds in SNAPSHOT:
@@ -286,6 +322,60 @@ def main():
     ax.legend(loc="upper left", fontsize=8)
     ax.set_ylim(0, 12)
     fig.savefig(FIGDIR + "/fig2_epoch_rates.pdf")
+    plt.close(fig)
+
+    # Fig 5 residual after subtracting known climate+GIA vector
+    fig, ax = plt.subplots(figsize=(8.0, 4.6))
+    labels = ["early", "middle 2010-2020", "burst"]
+    xpos = np.arange(3)
+    w = 0.26
+    dslist = list(SNAPSHOT)
+    cols = [COL["blue"], COL["orange"], COL["green"]]
+    for i, ds in enumerate(dslist):
+        s2 = store[ds]
+        t2, te2, t02 = s2["t"], s2["t"][-1], s2["t"][0]
+        rvals = []
+        for a, b in [(t02, t02 + 33), (2010, 2020), (te2 - 4.12, te2)]:
+            dx, dy, rm, lon = slope(t2, s2["sx"], s2["sy"], a, b)
+            rvals.append(residual_vector(dx, dy)[2])
+        ax.bar(xpos + (i - 1) * w, rvals, width=w, label=ds,
+               color=cols[i], edgecolor="white", lw=0.5)
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("residual rate after known subtraction (mas/yr)")
+    ax.set_title("Residual after subtracting climate+GIA vectors\n"
+                 "Adhikari & Ivins 2016 benchmark", fontsize=11)
+    ax.grid(axis="y", alpha=0.3, lw=0.5)
+    ax.legend(loc="upper left", fontsize=8)
+    ax.set_ylim(0, 6)
+    fig.savefig(FIGDIR + "/fig5_residual.pdf")
+    plt.close(fig)
+
+    # Fig 6 residual rate trajectory in rate space (trailing 5-year windows)
+    rx_list, ry_list, yrs_list = [], [], []
+    for y in np.arange(t[0] + 5, t[-1]):
+        m = (t >= y - 5) & (t < y)
+        if m.sum() < 300:
+            continue
+        dx, dy, rm, lon = slope(t, s["sx"], s["sy"], y - 5, y)
+        rx, ry, _, _ = residual_vector(dx, dy)
+        rx_list.append(rx); ry_list.append(ry); yrs_list.append(y)
+    rx = np.array(rx_list); ry = np.array(ry_list); yrs = np.array(yrs_list)
+    fig, ax = plt.subplots(figsize=(7.4, 6.0))
+    ax.plot(rx, ry, color=COL["grey"], lw=0.8, alpha=0.6)
+    epochs = [("early era", 1973, 2006, COL["grey"]),
+              ("2006-2020", 2006, 2020, COL["sky"]),
+              ("Oct 2022-Nov 2026", 2023, 2027, COL["vermilion"])]
+    for lbl, a, b, c in epochs:
+        mask = (yrs >= a) & (yrs < b)
+        ax.scatter(rx[mask], ry[mask], color=c, s=12, label=lbl)
+    ax.set_xlabel("residual x rate (mas/yr)")
+    ax.set_ylabel("residual y rate (mas/yr)")
+    ax.set_title("Residual rate trajectory after subtracting climate+GIA vectors\n"
+                 "IERS finals, trailing 5-year windows", fontsize=11)
+    ax.grid(alpha=0.3, lw=0.5)
+    ax.legend(loc="upper left", fontsize=8)
+    fig.savefig(FIGDIR + "/fig6_residual_trajectory.pdf")
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(8.2, 4.4))
