@@ -5,16 +5,15 @@ Chandler/annual wobble from the secular drift of the Earth's mean pole.
 
 ## Contents
 
-- `main.tex` / `main.pdf` --- paper source and built PDF (20 pages).
-- `figures/` --- seven PDF figures (trajectory, epoch rates with bootstrap CI,
-  rolling rates, cumulative displacement, residual rates, residual-rate trajectory,
-  residual displacement path).
+- `main.tex` / `main.pdf` --- paper source and built PDF (22 pages).
+- `figures/` --- nine PDF figures (trajectory, epoch rates with bootstrap CI,
+  rolling rates, cumulative displacement, baseline residual rates, residual-rate trajectory,
+  residual displacement path, burst half-width sweep, Chandler-window raw rates).
 - `data/` --- dated EOP snapshot (2026-11-24) for IERS finals, JPL EOP2 and C04,
   with SHA-256 checksums recorded in the paper.
 - `scripts/polar_drift_repro.py` --- reproduces diagnostics, epoch rates with
-  block-bootstrap intervals, net displacement, rolling rates, residual subtraction
-  against the known climate+GIA budget and all figures.
-
+  block-bootstrap intervals, net displacement, rolling rates, burst sensitivity,
+  baseline residual subtraction and all figures.
 ## Build
 
 ```
@@ -34,17 +33,11 @@ The script loads the archived snapshot by default and verifies its checksums;
 ## Result summary
 
 - Corrected one-basis co-fit (periods in years): 3.2 mas/yr.
-- Raw daily-window slope: 20.0 mas/yr; sequential sinusoid: 10.7 mas/yr (wobble inflation).
-- Centered +/-2 yr smoothing: burst 5.9 mas/yr (18.1 cm/yr), bootstrap CI 4.3--9.8;
-  interior-only variant 3.8 mas/yr.
+- Raw daily-window slope 20.0 mas/yr is Chandler leakage: a 4.12-year window sits near a half-integer Chandler cycle; whole multiples give 20.3 (2.37 yr), 5.7 (3.55 yr) and 4.9 (4.74 yr).
+- Centered +/-2 yr burst 5.9 mas/yr is unstable: half-width sweep 1.0--3.0 yr gives 8.1--2.7 mas/yr; harmonic fit over the last 4.1 yr gives 8.7; longer baselines give raw OLS 4.5 (2000--end), 5.2 (2010--end), and calendar-year means 3.7--4.7 (2020--2026). The data support roughly 4--5 mas/yr since about 2000, not a distinct 18 cm/yr episode.
 - Middle common window 2010--2020: 4.6 mas/yr in all three products.
-- Net displacement: 5.94 m (IERS finals), 7.18 m (JPL), 7.58 m (C04); recent window adds 0.74 m.
-- Residual benchmark after subtracting Adhikari & Ivins 2016 climate reconstruction (4.56 ±1.26 mas/yr at 27.7°E)
-  and GIA trend (3.06 mas/yr at 75°W): early-era subtraction omitted as anachronistic; burst interior-only 3.2 mas/yr
-  (CI not meaningful; 2.1-year window collapses to one 730-day block); burst full-window 3.8 mas/yr (CI 1.9--7.7) is edge-biased;
-  middle 1.4 mas/yr (CI 0.4--5.0) is circular. Climate-error-propagated bootstrap: only ~12% of burst replicates below 3 mas/yr,
-  fewer than 1% below 1 mas/yr; ellipse axes about 3.3 by 4.5 mas/yr; residual positive and not resolved to zero.
-  Combined uncertainty ±3 mas/yr or more; IERS Conventions mean-pole model comparison is the next benchmark, not done here.
+- Net displacement: 5.94 m (IERS finals), 7.18 m (JPL), 7.59 m (C04); recent window adds 0.74 m and is approximate.
+- Baseline residual: raw OLS 2010--end minus Adhikari & Ivins 2016 climate+GIA budget leaves 0.8 mas/yr (CI 0.35--4.08 finals; 0.30--4.14 JPL; 0.28--4.03 C04); about 22% of replicates below 1 mas/yr, consistent with zero to about 1 mas/yr. The benchmark overlaps 2010--2020, so this is not an independent test; the unstable four-year residual is not the headline.
 ## Scope
 
 Observed record calibration only. No mechanism, coupling or causal claim is made.

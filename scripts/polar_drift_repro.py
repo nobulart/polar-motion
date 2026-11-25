@@ -3,12 +3,13 @@
 
 Default: loads the dated snapshot in data/ (2026-11-24). Use --live to fetch
 the DRIFT endpoint instead. Prints diagnostics, epoch rates with block-bootstrap
-confidence intervals, net displacement and rolling rates; writes seven PDF figures, including the residual subtraction figures.
+confidence intervals, net displacement and rolling rates; writes nine PDF figures, including burst sensitivity and residual subtraction figures.
 
 Run with the plotting interpreter:
     /Users/craig/.venvs/figgen/bin/python3 scripts/polar_drift_repro.py
 """
 import argparse, hashlib, json, math
+import calendar
 from datetime import date
 import numpy as np
 import matplotlib
@@ -52,7 +53,8 @@ def to_array(data):
     out = []
     for rec in data:
         y, m, d = map(int, rec["t"].split("-"))
-        ty = y + (date(y, m, d) - date(y, 1, 1)).days / 365.0
+        ylen = 366 if calendar.isleap(y) else 365
+        ty = y + (date(y, m, d) - date(y, 1, 1)).days / ylen
         if math.isfinite(rec["xp"]) and math.isfinite(rec["yp"]):
             out.append((ty, rec["xp"], rec["yp"], y))
     return np.array(sorted(out))
@@ -181,6 +183,29 @@ def yearly_means(years, sx, sy):
             pos.append((y, sx[m].mean(), sy[m].mean()))
     return np.array(pos)
 
+def harmonic_fit(t, xx, yy, n):
+    """Linear trend + annual, semiannual and Chandler terms over the last n years."""
+    m = (t >= t[-1] - n) & (t <= t[-1])
+    tt, ax, ay = t[m], xx[m], yy[m]
+    cols = [np.ones(len(tt)), tt]
+    for P in PERIOD_YEARS:
+        w = 2 * math.pi / P
+        cols += [np.sin(w * tt), np.cos(w * tt)]
+    A = np.vstack(cols).T
+    cx, *_ = np.linalg.lstsq(A, ax, rcond=None)
+    cy, *_ = np.linalg.lstsq(A, ay, rcond=None)
+    dx, dy = cx[1] * 1000, cy[1] * 1000
+    return dx, dy, math.hypot(dx, dy)
+
+def calendar_means(years, xp, yp):
+    """Raw calendar-year means (no smoothing)."""
+    pos = []
+    for y in np.unique(years):
+        m = years == y
+        if m.sum() > 200:
+            pos.append((y, xp[m].mean(), yp[m].mean()))
+    return np.array(pos)
+
 def rolling(t, xx, yy, win=5.0):
     out = []
     for y in np.arange(t[0] + win, t[-1]):
@@ -245,42 +270,57 @@ def main():
                   "CI", round(lo, 1), "-", round(hi, 1),
                   "az", round(lon, 1))
 
-    print("\n=== RESIDUAL AFTER KNOWN SUBTRACTION ===")
-    print("known climate vector 4.56 mas/yr at 27.7 deg E (+/-1.26, treated as 1 sigma)")
-    print("known GIA vector 3.06 mas/yr at 75 deg W (exact)")
-    print("early era subtraction omitted: modern budget vs 1973-2006 is not an unexplained-motion test")
+    print("\n=== BURST SENSITIVITY ===")
+    s = store["finals"]
+    t, xp, yp = s["t"], s["xp"], s["yp"]
+    te = t[-1]
+    print("half-width sweep (finals, full/interior burst)")
+    for h in [1.0, 1.19, 2.0, 2.37, 3.0]:
+        sxh, syh = smooth(t, xp, h), smooth(t, yp, h)
+        full = slope(t, sxh, syh, te - 4.12, te)
+        inter = slope(t, sxh, syh, te - 4.12, te - 2.0) if h <= 2.0 else None
+        print(h, "yr", "full", round(full[2], 1), "mas/yr",
+              "interior", round(inter[2], 1) if inter else "n/a")
+    print("raw Chandler-multiple windows ending at te")
+    for yrs in [2.37, 3.55, 4.12, 4.74]:
+        print(yrs, "yr", round(slope(t, xp, yp, te - yrs, te)[2], 1), "mas/yr")
+    print("raw longer baselines")
+    for start in [2000, 2010, 2015]:
+        print(start, "-end", round(slope(t, xp, yp, start, te)[2], 1), "mas/yr")
+    print("raw calendar-year means baselines")
+    posraw = calendar_means(s["years"], xp, yp)
+    for start in [2018, 2020, 2022]:
+        print(start, "-2026", round(slope(posraw[:, 0], posraw[:, 1], posraw[:, 2],
+                                          start, posraw[-1, 0] + 1)[2], 1), "mas/yr")
+    print("local harmonic fits over last N years")
+    for n in [4.1, 5, 6, 8, 10]:
+        print(n, "yr", round(harmonic_fit(t, xp, yp, n)[2], 1), "mas/yr")
+    assert abs(slope(t, smooth(t, xp, 2.0), smooth(t, yp, 2.0), te - 4.12, te)[2] - 5.9) <= 0.1
+    assert abs(slope(t, xp, yp, te - 4.12, te)[2] - 19.9) <= 0.3
+
+    print("\n=== RESIDUAL AFTER KNOWN SUBTRACTION (baseline 2010-end) ===")
+    print("known climate vector 4.83, 0.84 mas/yr; benchmark overlaps 2010-2020")
     for ds in SNAPSHOT:
         s = store[ds]
-        t, te = s["t"], s["t"][-1]
-        windows = [("burst interior", te - 4.12, te - 2.0),
-                   ("burst full", te - 4.12, te),
-                   ("middle 2010-2020", 2010, 2020)]
-        for lbl, a, b in windows:
-            dx, dy, rm, lon = slope(t, s["sx"], s["sy"], a, b)
-            rx, ry, rmag, raz = residual_vector(dx, dy)
-            if lbl == "burst interior":
-                print(ds, lbl, "observed", round(rm, 1), "residual", round(rmag, 1),
-                      "mas/yr", "CI not meaningful (2.1-year window; 730-day block degenerate)",
-                      "az", round(raz, 1))
-                continue
-            seed = int(hashlib.sha256((ds + ":mc:" + lbl).encode()).hexdigest()[:8], 16)
-            bx_res, by_res = boot_residual(t, s["sx"], s["sy"], a, b, seed=seed)
-            mag = np.hypot(bx_res, by_res)
-            lo, hi = np.percentile(mag, 2.5), np.percentile(mag, 97.5)
-            p3 = float((mag < 3).mean())
-            cov = np.cov(bx_res, by_res)
-            vals, vecs = np.linalg.eigh(cov)
-            axes = np.sqrt(vals * 5.991)
-            print(ds, lbl, "observed", round(rm, 1), "residual", round(rmag, 1),
-                  "mas/yr", "CI", round(lo, 1), "-", round(hi, 1),
-                  "P(<3)", round(p3, 3), "ellipse axes", round(axes[0], 1), round(axes[1], 1),
-                  "az", round(raz, 1))
-    print("climate term +/-1.4 (magnitude +/-1.26 + direction +/-0.6 in quadrature); observed +/-2.5; combined +/-2.9 ~ +/-3")
-    print("bootstrap intervals are 95%; literature +/- values treated as 1 sigma")
-    print("burst residual is positive and not resolved to zero: only about 12% of replicates fall below 3 mas/yr")
+        t, xp, yp, te = s["t"], s["xp"], s["yp"], s["t"][-1]
+        dx, dy, rm, lon = slope(t, xp, yp, 2010, te)
+        rx, ry, rmag, raz = residual_vector(dx, dy)
+        seed = int(hashlib.sha256((ds + ":baseline").encode()).hexdigest()[:8], 16)
+        bx_res, by_res = boot_residual(t, xp, yp, 2010, te, seed=seed)
+        mag = np.hypot(bx_res, by_res)
+        lo, hi = np.percentile(mag, 2.5), np.percentile(mag, 97.5)
+        p1 = float((mag < 1).mean())
+        print(ds, "baseline 2010-end", "observed", round(rm, 1), "residual", round(rmag, 2),
+              "mas/yr", "CI", round(lo, 2), "-", round(hi, 2), "P(<1)", round(p1, 3),
+              "az", round(raz, 1))
+    print("baseline residual consistent with zero to about 1 mas/yr; overlapping benchmark is not an independent test")
+    print("four-year burst residual is unstable and is not used as the headline")
+    assert abs(residual_vector(*slope(t, xp, yp, 2010, te)[:2])[2] - 0.77) <= 0.1
+
+    # Reset to finals before plotting; the residual loop leaves s on the last dataset.
     s = store["finals"]
-    dx, dy, _, _ = slope(s["t"], s["sx"], s["sy"], s["t"][-1] - 4.12, s["t"][-1])
-    assert abs(residual_vector(dx, dy)[2] - 3.82) <= 0.1, "computed burst residual mismatch"
+    t, xp, yp = s["t"], s["xp"], s["yp"]
+    te = t[-1]
 
     print("\n=== NET DISPLACEMENT ===")
     for ds in SNAPSHOT:
@@ -380,44 +420,35 @@ def main():
     fig.savefig(FIGDIR + "/fig2_epoch_rates.pdf")
     plt.close(fig)
 
-    # Fig 5 residual rates: interior first, no interior CI, climate-error-propagated CI for full/middle
-    fig, ax = plt.subplots(figsize=(8.2, 4.8))
-    labels = ["burst interior-only", "burst full", "middle 2010-2020"]
-    xpos = np.arange(3)
+    # Fig 5 baseline residual rates (2010-end raw) with climate-error-propagated CI
+    fig, ax = plt.subplots(figsize=(7.8, 4.6))
+    labels = ["baseline 2010-end"]
+    xpos = np.arange(1)
     w = 0.24
     dslist = list(SNAPSHOT)
     cols = [COL["blue"], COL["orange"], COL["green"]]
     for i, ds in enumerate(dslist):
         s2 = store[ds]
-        t2, te2 = s2["t"], s2["t"][-1]
-        rvals, los, his = [], [], []
-        for lbl, a, b in [("burst interior", te2 - 4.12, te2 - 2.0),
-                          ("burst full", te2 - 4.12, te2),
-                          ("middle", 2010, 2020)]:
-            dx, dy, rm, lon = slope(t2, s2["sx"], s2["sy"], a, b)
-            rvals.append(residual_vector(dx, dy)[2])
-            if lbl == "burst interior":
-                los.append(np.nan); his.append(np.nan); continue
-            seed = int(hashlib.sha256((ds + ":fig5mc:" + lbl).encode()).hexdigest()[:8], 16)
-            bx_res, by_res = boot_residual(t2, s2["sx"], s2["sy"], a, b, seed=seed)
-            mag = np.hypot(bx_res, by_res)
-            los.append(np.percentile(mag, 2.5)); his.append(np.percentile(mag, 97.5))
+        t2, xp2, yp2, te2 = s2["t"], s2["xp"], s2["yp"], s2["t"][-1]
+        dx, dy, rm, lon = slope(t2, xp2, yp2, 2010, te2)
+        rvals = residual_vector(dx, dy)[2]
+        seed = int(hashlib.sha256((ds + ":fig5baseline").encode()).hexdigest()[:8], 16)
+        bx_res, by_res = boot_residual(t2, xp2, yp2, 2010, te2, seed=seed)
+        mag = np.hypot(bx_res, by_res)
+        lo, hi = np.percentile(mag, 2.5), np.percentile(mag, 97.5)
         centers = xpos + (i - 1) * w
         ax.bar(centers, rvals, width=w, label=ds,
                color=cols[i], edgecolor="white", lw=0.5)
-        mask = np.isfinite(los) & np.isfinite(his)
-        ax.errorbar(centers[mask], np.array(rvals)[mask],
-                    yerr=[np.array(rvals)[mask] - np.array(los)[mask],
-                          np.array(his)[mask] - np.array(rvals)[mask]],
+        ax.errorbar(centers, rvals, yerr=[[rvals - lo], [hi - rvals]],
                     fmt="none", ecolor=COL["grey"], capsize=3, lw=1.0)
     ax.set_xticks(xpos)
     ax.set_xticklabels(labels)
-    ax.set_ylabel("residual rate after known subtraction (mas/yr)")
-    ax.set_title("Residual rates with climate-error-propagated CI\n"
-                 "Adhikari & Ivins 2016 benchmark; early era omitted; interior CI not meaningful", fontsize=11)
+    ax.set_ylabel("baseline residual rate (mas/yr)")
+    ax.set_title("Baseline residual after known subtraction\n"
+                 "raw OLS 2010-end; climate-error-propagated CI", fontsize=11)
     ax.grid(axis="y", alpha=0.3, lw=0.5)
     ax.legend(loc="upper left", fontsize=8)
-    ax.set_ylim(0, 9)
+    ax.set_ylim(0, 5)
     fig.savefig(FIGDIR + "/fig5_residual.pdf")
     plt.close(fig)
 
@@ -478,6 +509,41 @@ def main():
     fig.savefig(FIGDIR + "/fig7_residual_path.pdf")
     plt.close(fig)
 
+    # Fig 8 burst rate vs smoothing half-width
+    halfs = [1.0, 1.19, 2.0, 2.37, 3.0]
+    full_r, inter_r = [], []
+    for h in halfs:
+        sxh, syh = smooth(t, xp, h), smooth(t, yp, h)
+        full_r.append(slope(t, sxh, syh, te - 4.12, te)[2])
+        inter_r.append(slope(t, sxh, syh, te - 4.12, te - 2.0)[2] if h <= 2.0 else np.nan)
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    ax.plot(halfs, full_r, marker="o", color=COL["blue"], lw=2.0, label="full window")
+    ax.plot(halfs, inter_r, marker="o", color=COL["orange"], lw=2.0, label="interior-only")
+    ax.axvline(2.0, color=COL["grey"], ls="--", lw=1.0, label="paper half-width")
+    ax.set_xlabel("centered smoothing half-width (yr)")
+    ax.set_ylabel("burst rate (mas/yr)")
+    ax.set_title("Burst rate vs smoothing half-width\n"
+                 "IERS finals; one point on a steep curve", fontsize=11)
+    ax.grid(alpha=0.3, lw=0.5)
+    ax.legend(loc="upper right", fontsize=8)
+    fig.savefig(FIGDIR + "/fig8_halfwidth_sweep.pdf")
+    plt.close(fig)
+
+    # Fig 9 raw rate vs window length (Chandler multiples)
+    lengths = [2.37, 3.55, 4.12, 4.74]
+    raw_r = [slope(t, xp, yp, te - L, te)[2] for L in lengths]
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    ax.plot(lengths, raw_r, marker="o", color=COL["vermilion"], lw=2.0)
+    ax.axvline(4.12, color=COL["grey"], ls="--", lw=1.0, label="4.12 yr burst window")
+    ax.set_xlabel("window length ending at series end (yr)")
+    ax.set_ylabel("raw OLS rate (mas/yr)")
+    ax.set_title("Raw rate vs window length\n"
+                 "IERS finals; whole Chandler multiples suppress leakage", fontsize=11)
+    ax.grid(alpha=0.3, lw=0.5)
+    ax.legend(loc="upper right", fontsize=8)
+    fig.savefig(FIGDIR + "/fig9_chandler_windows.pdf")
+    plt.close(fig)
+
     fig, ax = plt.subplots(figsize=(8.2, 4.4))
     ax.plot(rawr[:, 0], rawr[:, 1], color=COL["grey"], lw=1.0,
             label="raw series")
@@ -513,7 +579,8 @@ def main():
 
     print("\nFigures written to figures/: fig1_trajectory.pdf, "
           "fig2_epoch_rates.pdf, fig3_rolling_rate.pdf, fig4_cumulative.pdf, "
-          "fig5_residual.pdf, fig6_residual_trajectory.pdf, fig7_residual_path.pdf")
+          "fig5_residual.pdf, fig6_residual_trajectory.pdf, fig7_residual_path.pdf, "
+          "fig8_halfwidth_sweep.pdf, fig9_chandler_windows.pdf")
 
 if __name__ == "__main__":
     main()
