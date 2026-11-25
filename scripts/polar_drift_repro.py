@@ -216,6 +216,17 @@ def rolling(t, xx, yy, win=5.0):
         out.append((y, rm))
     return np.array(out)
 
+def sliding_spread(t, xx, yy, L, last=12.0, step=0.25):
+    """Raw OLS rate for window length L with end time sliding over the last `last` years."""
+    vals = []
+    te = t[-1]
+    for end in np.arange(te - last, te + 0.01, step):
+        m = (t >= end - L) & (t < end)
+        if m.sum() < 300:
+            continue
+        vals.append(slope(t, xx, yy, end - L, end)[2])
+    return np.array(vals)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", action="store_true")
@@ -281,9 +292,11 @@ def main():
         inter = slope(t, sxh, syh, te - 4.12, te - 2.0) if h <= 2.0 else None
         print(h, "yr", "full", round(full[2], 1), "mas/yr",
               "interior", round(inter[2], 1) if inter else "n/a")
-    print("raw Chandler-multiple windows ending at te")
-    for yrs in [2.37, 3.55, 4.12, 4.74]:
-        print(yrs, "yr", round(slope(t, xp, yp, te - yrs, te)[2], 1), "mas/yr")
+    print("sliding end-time spread, last 12 years")
+    for L in [3.55, 4.12, 4.74, 7.11]:
+        vals = sliding_spread(t, xp, yp, L)
+        print(L, "yr range", round(vals.min(), 1), "-", round(vals.max(), 1),
+              "median", round(np.median(vals), 1), "n", len(vals))
     print("raw longer baselines")
     for start in [2000, 2010, 2015]:
         print(start, "-end", round(slope(t, xp, yp, start, te)[2], 1), "mas/yr")
@@ -305,15 +318,21 @@ def main():
         t, xp, yp, te = s["t"], s["xp"], s["yp"], s["t"][-1]
         dx, dy, rm, lon = slope(t, xp, yp, 2010, te)
         rx, ry, rmag, raz = residual_vector(dx, dy)
-        seed = int(hashlib.sha256((ds + ":baseline").encode()).hexdigest()[:8], 16)
+        seed = int(hashlib.sha256((ds + ":ellipse").encode()).hexdigest()[:8], 16)
         bx_res, by_res = boot_residual(t, xp, yp, 2010, te, seed=seed)
-        mag = np.hypot(bx_res, by_res)
-        lo, hi = np.percentile(mag, 2.5), np.percentile(mag, 97.5)
-        p1 = float((mag < 1).mean())
-        print(ds, "baseline 2010-end", "observed", round(rm, 1), "residual", round(rmag, 2),
-              "mas/yr", "CI", round(lo, 2), "-", round(hi, 2), "P(<1)", round(p1, 3),
-              "az", round(raz, 1))
-    print("baseline residual consistent with zero to about 1 mas/yr; overlapping benchmark is not an independent test")
+        cov = np.cov(bx_res, by_res); vals, vecs = np.linalg.eigh(cov)
+        axes = np.sqrt(vals * 5.991); center = np.array([bx_res.mean(), by_res.mean()])
+        inv = np.linalg.inv(cov)
+        pts = np.vstack([bx_res - center[0], by_res - center[1]]).T
+        maha = np.einsum("ij,jk,ik->i", pts, inv, pts)
+        d = np.array([0 - center[0], 0 - center[1]]); maha0 = d @ inv @ d
+        p_inside = float((maha <= 5.991).mean())
+        print(ds, "baseline 2010-end", "point", round(rx, 2), round(ry, 2),
+              "rx CI", round(np.percentile(bx_res, 2.5), 2), round(np.percentile(bx_res, 97.5), 2),
+              "ry CI", round(np.percentile(by_res, 2.5), 2), round(np.percentile(by_res, 97.5), 2),
+              "ellipse axes", round(axes[0], 2), round(axes[1], 2),
+              "P(0 inside 95%)", round(p_inside, 3), "mag median", round(np.median(np.hypot(bx_res, by_res)), 2))
+    print("baseline residual consistent with zero to about 2.5-3 mas/yr (95%); overlapping benchmark is not an independent test")
     print("four-year burst residual is unstable and is not used as the headline")
     assert abs(residual_vector(*slope(t, xp, yp, 2010, te)[:2])[2] - 0.77) <= 0.1
 
@@ -420,35 +439,32 @@ def main():
     fig.savefig(FIGDIR + "/fig2_epoch_rates.pdf")
     plt.close(fig)
 
-    # Fig 5 baseline residual rates (2010-end raw) with climate-error-propagated CI
-    fig, ax = plt.subplots(figsize=(7.8, 4.6))
-    labels = ["baseline 2010-end"]
-    xpos = np.arange(1)
-    w = 0.24
+    # Fig 5 baseline residual vector ellipse (2D, climate-error-propagated)
+    fig, ax = plt.subplots(figsize=(7.4, 6.0))
     dslist = list(SNAPSHOT)
     cols = [COL["blue"], COL["orange"], COL["green"]]
+    theta = np.linspace(0, 2 * np.pi, 200)
     for i, ds in enumerate(dslist):
         s2 = store[ds]
         t2, xp2, yp2, te2 = s2["t"], s2["xp"], s2["yp"], s2["t"][-1]
-        dx, dy, rm, lon = slope(t2, xp2, yp2, 2010, te2)
-        rvals = residual_vector(dx, dy)[2]
-        seed = int(hashlib.sha256((ds + ":fig5baseline").encode()).hexdigest()[:8], 16)
+        seed = int(hashlib.sha256((ds + ":fig5ellipse").encode()).hexdigest()[:8], 16)
         bx_res, by_res = boot_residual(t2, xp2, yp2, 2010, te2, seed=seed)
-        mag = np.hypot(bx_res, by_res)
-        lo, hi = np.percentile(mag, 2.5), np.percentile(mag, 97.5)
-        centers = xpos + (i - 1) * w
-        ax.bar(centers, rvals, width=w, label=ds,
-               color=cols[i], edgecolor="white", lw=0.5)
-        ax.errorbar(centers, rvals, yerr=[[rvals - lo], [hi - rvals]],
-                    fmt="none", ecolor=COL["grey"], capsize=3, lw=1.0)
-    ax.set_xticks(xpos)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel("baseline residual rate (mas/yr)")
-    ax.set_title("Baseline residual after known subtraction\n"
-                 "raw OLS 2010-end; climate-error-propagated CI", fontsize=11)
-    ax.grid(axis="y", alpha=0.3, lw=0.5)
+        cov = np.cov(bx_res, by_res); vals, vecs = np.linalg.eigh(cov)
+        center = np.array([bx_res.mean(), by_res.mean()])
+        axes = np.sqrt(vals * 5.991)
+        pts = np.vstack([np.cos(theta) * axes[0], np.sin(theta) * axes[1]])
+        ell = vecs @ pts + center[:, None]
+        ax.plot(ell[0], ell[1], color=cols[i], lw=1.6, label=ds + " 95% ellipse")
+        ax.scatter(center[0], center[1], color=cols[i], s=20)
+    ax.scatter(0, 0, color=COL["vermilion"], marker="*", s=80, label="zero residual")
+    ax.set_xlabel("residual bx (mas/yr)")
+    ax.set_ylabel("residual by (mas/yr)")
+    ax.set_title("Baseline residual vector ellipse\n"
+                 "raw OLS 2010-end; climate-error-propagated", fontsize=11)
+    ax.grid(alpha=0.3, lw=0.5)
     ax.legend(loc="upper left", fontsize=8)
-    ax.set_ylim(0, 5)
+    ax.set_xlim(-4.5, 4.5)
+    ax.set_ylim(-3.5, 3.5)
     fig.savefig(FIGDIR + "/fig5_residual.pdf")
     plt.close(fig)
 
@@ -529,19 +545,26 @@ def main():
     fig.savefig(FIGDIR + "/fig8_halfwidth_sweep.pdf")
     plt.close(fig)
 
-    # Fig 9 raw rate vs window length (Chandler multiples)
-    lengths = [2.37, 3.55, 4.12, 4.74]
-    raw_r = [slope(t, xp, yp, te - L, te)[2] for L in lengths]
+    # Fig 9 raw rate vs window end time, sliding over last 12 years
     fig, ax = plt.subplots(figsize=(7.4, 4.6))
-    ax.plot(lengths, raw_r, marker="o", color=COL["vermilion"], lw=2.0)
-    ax.axvline(4.12, color=COL["grey"], ls="--", lw=1.0, label="4.12 yr burst window")
-    ax.set_xlabel("window length ending at series end (yr)")
+    for L, color in [(3.55, COL["grey"]), (4.12, COL["blue"]),
+                     (4.74, COL["orange"]), (7.11, COL["green"])]:
+        vals = []
+        ends = []
+        for end in np.arange(te - 12, te + 0.01, 0.25):
+            m = (t >= end - L) & (t < end)
+            if m.sum() < 300:
+                continue
+            vals.append(slope(t, xp, yp, end - L, end)[2])
+            ends.append(end)
+        ax.plot(ends, vals, color=color, lw=1.4, label=str(L) + " yr")
+    ax.set_xlabel("window end time (yr)")
     ax.set_ylabel("raw OLS rate (mas/yr)")
-    ax.set_title("Raw rate vs window length\n"
-                 "IERS finals; whole Chandler multiples suppress leakage", fontsize=11)
+    ax.set_title("Raw rate vs window end time\n"
+                 "IERS finals; short windows have phase-dependent spread", fontsize=11)
     ax.grid(alpha=0.3, lw=0.5)
     ax.legend(loc="upper right", fontsize=8)
-    fig.savefig(FIGDIR + "/fig9_chandler_windows.pdf")
+    fig.savefig(FIGDIR + "/fig9_sliding_end_spread.pdf")
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(8.2, 4.4))
@@ -580,7 +603,7 @@ def main():
     print("\nFigures written to figures/: fig1_trajectory.pdf, "
           "fig2_epoch_rates.pdf, fig3_rolling_rate.pdf, fig4_cumulative.pdf, "
           "fig5_residual.pdf, fig6_residual_trajectory.pdf, fig7_residual_path.pdf, "
-          "fig8_halfwidth_sweep.pdf, fig9_chandler_windows.pdf")
+          "fig8_halfwidth_sweep.pdf, fig9_sliding_end_spread.pdf")
 
 if __name__ == "__main__":
     main()

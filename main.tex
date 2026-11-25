@@ -20,12 +20,12 @@
 \maketitle
 
 \begin{abstract}
-The Earth Orientation Parameter record carries Chandler and annual wobble and a secular mean-pole drift. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width) and rates are estimated by ordinary least squares with block-bootstrap intervals. The early era runs at 3.6--5.0 mas/yr, the middle calendar window 2010--2020 at 4.6 mas/yr, and the burst centered width reads 5.9 mas/yr (18.1 cm/yr) but is unstable: the half-width sweep from 1.0 to 3.0 years gives 8.1 down to 2.7 mas/yr, a local harmonic fit over the last 4.1 years gives 8.7 mas/yr, and longer baselines give raw OLS 4.5 (2000--end), 5.2 (2010--end) and calendar-year means 3.7--4.7 (2020--2026). The data support roughly 4--5 mas/yr since about 2000, not a distinct 18 cm/yr episode. The raw 20.0 mas/yr is a Chandler-leakage artifact: the 4.12-year window is near a half-integer Chandler cycle, while whole multiples give 20.3 (2.37 yr), 5.7 (3.55 yr) and 4.9 (4.74 yr). A baseline residual of raw OLS 2010--end minus the known climate+GIA budget leaves 0.8 mas/yr (CI 0.35--4.1), consistent with zero to about 1 mas/yr; the benchmark overlaps 2010--2020 and is not an independent test. Net displacement is 5.94, 7.18 and 7.59 m; the recent yearly-mean addition is 0.74 m and approximate. The dated snapshot, checksums, script and public repository reproduce every number.
+The Earth Orientation Parameter record carries Chandler and annual wobble and a secular mean-pole drift. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width) and rates are estimated by ordinary least squares with block-bootstrap intervals. The early era runs at 3.6--5.0 mas/yr, the middle calendar window 2010--2020 at 4.6 mas/yr, and the burst centered width reads 5.9 mas/yr (18.1 cm/yr) but is unstable: the half-width sweep from 1.0 to 3.0 years gives 8.1 down to 2.7 mas/yr, a local harmonic fit over the last 4.1 years gives 8.7 mas/yr, and longer baselines give raw OLS 4.5 (2000--end), 5.2 (2010--end) and calendar-year means 3.7--4.7 (2020--2026). The data support roughly 4--5 mas/yr since about 2000, not a distinct 18 cm/yr episode. The raw 19.9 mas/yr is mostly annual leakage and phase, not fully explained: sliding end times over the last 12 years give ranges 2.0--22.9 (3.55 yr), 1.7--20.7 (4.12 yr), 0.5--16.9 (4.74 yr) and 0.3--11.3 (7.11 yr); short windows under 8 years have end-time errors of order 10 mas/yr and no length fixes that. A baseline residual vector of raw OLS 2010--end minus the known climate+GIA budget is about (0.1, 0.8) mas/yr with component spread ±1.4 and ±1.3 mas/yr and 95% ellipse axes 2.6 by 3.9 mas/yr; zero lies inside the ellipse (p≈0.95), so the residual is consistent with zero to about 2.5--3 mas/yr; the benchmark overlaps 2010--2020 and is not an independent test. Net displacement is 5.94, 7.18 and 7.59 m; the recent yearly-mean addition is 0.74 m and approximate. The dated snapshot, checksums, script and public repository reproduce every number.
 \end{abstract}
 
 \section{Purpose and scope}
 
-Polar motion is measured as the displacement of the Earth's rotation pole over the surface, reported as $x_{\text{pole}}$ and $y_{\text{pole}}$ in arcseconds. Two components sit in that record: the Chandler wobble (period near 432.9 days) and the annual wobble (365.2425 days), both returning on themselves within metres, and a secular drift that accumulates over decades. A rate computed from a short window without suppressing the wobble inflates the secular drift: the raw example is about 3.4 times the smoothed rate and sequential subtraction about 1.8 times. This paper calibrates the secular component, states the failure modes and the edge limitations explicitly, and provides the snapshot, script and repository needed to reproduce every number.
+Polar motion is measured as the displacement of the Earth's rotation pole over the surface, reported as $x_{\text{pole}}$ and $y_{\text{pole}}$ in arcseconds. Two components sit in that record: the Chandler wobble (period near 432.9 days) and the annual wobble (365.2425 days), both returning on themselves within metres, and a secular drift that accumulates over decades. A rate computed from a short window without suppressing the wobble inflates the secular drift: the raw example is severalfold the smoothed point, but the smoothed point is itself unstable, so the ratio illustrates leakage rather than a robust calibration. This paper calibrates the secular component, states the failure modes and the edge limitations explicitly, and provides the snapshot, script and repository needed to reproduce every number.
 
 The scope is the observed record and its calibration. No mechanism, coupling, or causal claim is made or tested here. Surface mass redistribution provides the physical context for polar motion \cite{adhikari}. Section 7 subtracts the published climate+GIA budget as a benchmark, but that subtraction is not a mechanism test and does not establish causation.
 
@@ -68,11 +68,11 @@ The wobble periods are quoted in days: annual 365.2425, semiannual 182.6211, Cha
 
 \subsection{Residual wobble and the raw window}
 
-Sequential sinusoid subtraction --- fit the linear trend first, then fit harmonics to the residual and subtract them --- leaves residual Chandler and annual leakage because amplitude and phase drift across the record. A daily-window slope over the recent window then reads 10.7 mas/yr (33.1 cm/yr), roughly twofold the smoothed secular rate. A raw daily-window slope reads 20.0 mas/yr (61.6 cm/yr) in this one window, but raw trailing slopes swing from 1.5 to 22.8 mas/yr and read 5.0 at the series end; 20.0 is one example of that scatter, not the raw secular rate. Both raw and sequential values are wobble inflation.
+Sequential sinusoid subtraction --- fit the linear trend first, then fit harmonics to the residual and subtract them --- leaves residual Chandler and annual leakage because amplitude and phase drift across the record. A daily-window slope over the recent window then reads 10.6 mas/yr (32.8 cm/yr), roughly twofold the unstable smoothed point. A raw daily-window slope reads 19.9 mas/yr (61.5 cm/yr) in this one window, but raw trailing slopes swing from 1.5 to 22.8 mas/yr and read 5.0 at the series end; 19.9 is one example of that scatter, not the raw secular rate. Both raw and sequential values are wobble inflation.
 
 \begin{table}[ht]
 \centering
-\caption{Method contrast on the IERS finals October 2022--November 2026 window. The whole-record co-fit is context; the raw and sequential rows show wobble inflation; the smoothed row is the secular estimate, with its edge variant.}
+\caption{Method contrast on the IERS finals October 2022--November 2026 window. The whole-record co-fit is context; the raw and sequential rows show wobble inflation; the smoothed row is an unstable centered-width value, with its edge variant.}
 \label{tab:contrast}
 \small
 \resizebox{\textwidth}{!}{%
@@ -80,10 +80,10 @@ Sequential sinusoid subtraction --- fit the linear trend first, then fit harmoni
 \toprule
 Method & Rate (mas/yr) & Rate (cm/yr) & Status \\
 \midrule
-Raw daily-window slope & 20.0 & 61.6 & One example of raw scatter (range 1.5--22.8) \\
+Raw daily-window slope & 19.9 & 61.5 & One example of raw scatter (range 1.5--22.8) \\
 Whole-record one-basis co-fit & 3.2 & 9.9 & Whole-record rate, periods in years \\
-Sequential sinusoid subtraction & 10.7 & 33.1 & Residual wobble leakage \\
-Centered smoothing (full window) & 5.9 & 18.1 & Secular estimate, CI 3.6--8.6 \\
+Sequential sinusoid subtraction & 10.6 & 32.8 & Residual wobble leakage \\
+Centered smoothing (full window) & 5.9 & 18.1 & Unstable centered width, CI 3.6--8.6 \\
 Centered smoothing (interior, excl last 2 yr) & 3.8 & 11.7 & Edge variant, ~2.1-yr window; noisy \\
 \bottomrule
 \end{tabular}}
@@ -97,13 +97,13 @@ S(t_i) = \frac{1}{N_i} \sum_{j:\,|t_j - t_i| \le 2\text{ yr}} x_j .
 \end{equation}
 The full width is four years; the Chandler period is 432.9 days, about 1.186 years, and a four-year width spans multiple Chandler cycles, averaging out the annual and semiannual components. Two limits are stated explicitly. First, samples within two years of either end of the series use truncated windows: annual leakage appears there because the width is no longer an integer number of years, and Chandler suppression is imperfect even in the interior. Second, the burst window ends at the series end, so its last two years carry truncated windows. Edge truncation makes the burst estimate unstable rather than inflating it uniformly: the full-window 5.9 mas/yr and interior-only 3.8 mas/yr are not a stable ordering across widths, and the four-year window is too short to fix the rate.
 
-\subsection{Burst sensitivity and Chandler-multiple windows}
+\subsection{Burst sensitivity and sliding-window spread}
 
 The burst rate is one point on a steep curve, not a robust estimate. A half-width sweep for IERS finals gives:
 
 \begin{table}[ht]
 \centering
-\caption*{Burst rate vs centered smoothing half-width, IERS finals.}
+\caption*{Table S1: Burst rate vs centered smoothing half-width, IERS finals.}
 \begin{tabular}{rrr}
 \toprule
 Half-width (yr) & Full window (mas/yr) & Interior-only (mas/yr) \\
@@ -117,27 +117,38 @@ Half-width (yr) & Full window (mas/yr) & Interior-only (mas/yr) \\
 \end{tabular}
 \end{table}
 
-A local harmonic fit over the last $N$ years is also unstable: 8.7 mas/yr for 4.1 years, 8.2 for 5, 6.1 for 6, 4.2 for 8 and 3.7 for 10. The four-year burst window cannot separate drift from Chandler phase. Longer baselines show no distinct recent episode:
+Harmonic fits over the last 6--10 years give 6.1, 4.2 and 3.7 mas/yr; the shorter 4.1- and 5-year fits (8.7 and 8.2 mas/yr) are collinearity-dominated between the linear term and a roughly one-cycle sinusoid and are not evidence of drift, so they are omitted from the table below. The four-year burst window cannot separate drift from Chandler phase. A sliding end-time sweep over the last 12 years shows that short windows have phase-dependent spread rather than a length rule:
 
 \begin{table}[ht]
 \centering
-\caption*{Raw OLS rates by window length, baseline and harmonic fit, IERS finals.}
+\caption*{Table S2: Raw OLS rate range and median when the window end time slides over the last 12 years, IERS finals.}
+\begin{tabular}{rrr}
+\toprule
+Window (yr) & Raw range (mas/yr) & Median (mas/yr) \\
+\midrule
+3.55 & 2.0--22.9 & 8.8 \\
+4.12 & 1.7--20.7 & 11.4 \\
+4.74 & 0.5--16.9 & 8.4 \\
+7.11 & 0.3--11.3 & 6.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Leakage in the slope falls roughly as $1/L^2$ and depends on the phase at the window centre as well as the window length; short windows under about 8 years have end-time-dependent errors of order 10 mas/yr, and no choice of length fixes that. Longer baselines show no distinct recent episode:
+
+\begin{table}[ht]
+\centering
+\caption*{Table S3: Longer-baseline raw OLS and calendar-year-mean rates, IERS finals.}
 \begin{tabular}{llr}
 \toprule
 Category & Window or baseline & Rate (mas/yr) \\
 \midrule
-Raw OLS & 2.37 yr ending at series end & 20.3 \\
-Raw OLS & 3.55 yr ending at series end & 5.7 \\
-Raw OLS & 4.12 yr ending at series end & 19.9 \\
-Raw OLS & 4.74 yr ending at series end & 4.9 \\
 Raw OLS & 2000--end & 4.5 \\
 Raw OLS & 2010--end & 5.2 \\
 Raw OLS & 2015--end & 5.1 \\
 Calendar-year means & 2018--2026 & 4.0 \\
 Calendar-year means & 2020--2026 & 3.7 \\
 Calendar-year means & 2022--2026 & 4.7 \\
-Harmonic fit & last 4.1 yr & 8.7 \\
-Harmonic fit & last 5 yr & 8.2 \\
 Harmonic fit & last 6 yr & 6.1 \\
 Harmonic fit & last 8 yr & 4.2 \\
 Harmonic fit & last 10 yr & 3.7 \\
@@ -148,18 +159,16 @@ Harmonic fit & last 10 yr & 3.7 \\
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig8_halfwidth_sweep.pdf}
-\caption*{Burst rate vs smoothing half-width, IERS finals. The 5.9 mas/yr paper value is one point on a steep curve between about 9 and 3 mas/yr.}
+\caption*{Figure S1: Burst rate vs smoothing half-width, IERS finals. The 5.9 mas/yr paper value is one point on a steep curve between about 9 and 3 mas/yr.}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/fig9_chandler_windows.pdf}
-\caption*{Raw OLS rate vs window length ending at the series end, IERS finals. Whole Chandler multiples give 5--6 mas/yr; the 4.12-year burst window sits near a half-integer cycle and reads 19.9 mas/yr.}
+\includegraphics[width=0.9\textwidth]{figures/fig9_sliding_end_spread.pdf}
+\caption*{Figure S2: Raw OLS rate vs window end time over the last 12 years, IERS finals. Short windows have phase-dependent spread of order 10 mas/yr; no choice of length fixes that.}
 \end{figure}
 
-The raw 20.0 mas/yr is therefore a Chandler-leakage artifact, not a secular burst: a window of 4.12 years is near a half-integer number of Chandler cycles, the worst case for leakage, while whole multiples suppress it. Longer baselines give roughly 4--5 mas/yr since about 2000--2010, consistent with the middle-era 4.6 mas/yr; the data do not support 18 cm/yr as a distinct recent episode. A half-width sweep or Chandler-multiple windows are a stronger robustness check than the bootstrap, because the bootstrap cannot capture the sensitivity to window choice.
-
-\section{Epoch definition and rate estimation}
+The raw 19.9 mas/yr is mostly annual leakage and phase, not a Chandler-multiple artifact. The 4.12-year window is near a whole number of annual cycles (about 4.12 annual cycles, a leakage maximum), while the Chandler leakage at that length is small; the value is not fully explained by either term alone. The sliding-end-time spread shows that short windows under about 8 years carry end-time-dependent errors of order 10 mas/yr, and whole Chandler multiples do not suppress leakage in general. Longer baselines give roughly 4--5 mas/yr since about 2000--2010, consistent with the middle-era 4.6 mas/yr; the data do not support 18 cm/yr as a distinct recent episode. A half-width sweep or sliding-end-time spread is a stronger robustness check than the bootstrap, because the bootstrap cannot capture the sensitivity to window choice.\section{Epoch definition and rate estimation}
 
 The early window is $(t_0, t_0+33)$ years and is dataset-specific: 1973--2006 for IERS finals and 1962--1995 for JPL and C04. The middle window is the common calendar interval 2010--2020 for all three products, so the rates compare like intervals. The burst window is $(t_e-4.12, t_e)$, the October 2022 to November 2026 interval. The boundaries are exploratory and arbitrary; the burst window was chosen after observing the recent episode, not pre-registered.
 
@@ -189,13 +198,13 @@ Dataset & Epoch & $b_x$ & $b_y$ & Rate (mas/yr) & Bootstrap CI & cm/yr & Azimuth
 \midrule
 IERS finals & Early (1973--2006) & 1.0 & 3.4 & 3.6 & 3.1--4.0 & 11.0 & $-73.6$ \\
 IERS finals & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.2 & 14.3 & $-26.7$ \\
-IERS finals & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.6--8.6 & 18.1 & $-50.1$ \\
+IERS finals & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.6--8.6 & 18.1 & $-50.0$ \\
 JPL EOP2 & Early (1962--1995) & 2.3 & 4.1 & 4.7 & 4.5--5.2 & 14.5 & $-61.1$ \\
 JPL EOP2 & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.1 & 14.3 & $-26.8$ \\
-JPL EOP2 & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.2$ \\
+JPL EOP2 & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.1$ \\
 C04/IAU2000A & Early (1962--1995) & 2.0 & 4.6 & 5.0 & 4.8--5.4 & 15.6 & $-66.1$ \\
 C04/IAU2000A & Middle (2010--2020) & 4.1 & 2.1 & 4.6 & 4.6--6.1 & 14.3 & $-26.7$ \\
-C04/IAU2000A & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.2$ \\
+C04/IAU2000A & Burst (Oct 2022--Nov 2026) & 3.8 & 4.5 & 5.9 & 3.7--8.6 & 18.1 & $-50.1$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -232,7 +241,7 @@ C04/IAU2000A & 1962--2026 & 7.59 & 24.9 & 0.74 \\
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig3_rolling_rate.pdf}
-\caption{Trailing five-year secular rate for the raw series versus the centered smoothed series, IERS finals. Raw short-window slopes swing from 1.5 to 22.8 mas/yr (maximum at 2009) and read 5.0 at the series end; the smoothed series peaks near 8.6 mas/yr at 2011 and its trailing values in 2022--2026 fall to 3.1--4.7 mas/yr, below the full-window burst estimate of 5.9. The point estimates 3.6, 4.6 and 5.9 are monotonic, but their intervals overlap and this rolling series does not support a trend; the burst figure is sensitive to window choice.}
+\caption{Trailing five-year secular rate for the raw series versus the centered smoothed series, IERS finals. Raw short-window slopes swing from 1.5 to 22.8 mas/yr (maximum at 2009) and read 5.0 at the series end; the smoothed series peaks near 8.6 mas/yr at 2011 and its trailing values in 2022--2026 fall to 3.1--4.7 mas/yr, below the unstable full-window burst estimate of 5.9. The rolling series does not support a trend; short windows have end-time-dependent spread.}
 \label{fig:rolling}
 \end{figure}
 
@@ -266,21 +275,21 @@ GIA long-term trend & $3.06$ & $75^{\circ}$W & $0.85^{\circ}$/Myr converted to m
 
 Vector subtraction removes the climate reconstruction and the GIA trend from the observed vector. In the paper's frame the y axis points toward 90$^{\circ}$W, so west directions carry positive $b_y$ and east directions negative $b_y$. The baseline residual uses raw OLS over 2010 to the series end: the observed vector is about (4.9, 1.6) mas/yr and the known vector is (4.83, 0.84) mas/yr, leaving about (0.1, 0.8), or 0.77 mas/yr at $-84^{\circ}$. Early-era residuals are not reported: subtracting the 2003--2015 ice-melt budget from 1973--2006 data measures how different the early period was from the modern budget, not what remains unexplained.
 
-The baseline overlaps the benchmark period. The climate reconstruction was derived from 2003--2015 and the baseline runs from 2010, so the subtraction is not an independent test; it measures consistency with the known budget over an overlapping interval, not unexplained motion. The climate-error-propagated bootstrap gives a residual magnitude interval of 0.35--4.08 mas/yr and about 22\% of replicates below 1 mas/yr, so the baseline residual is consistent with zero to about 1 mas/yr. The four-year burst residual is unstable, as the sensitivity sweep shows, and is not used as the headline; earlier interior-only and full-window residual values are illustrative of that instability rather than a robust claim.
+The baseline overlaps the benchmark period. The climate reconstruction was derived from 2003--2015 and the baseline runs from 2010, so the subtraction is not an independent test; it measures consistency with the known budget over an overlapping interval, not unexplained motion. The climate-error-propagated bootstrap gives component spreads of about $\pm$ 1.4 and $\pm$ 1.3 mas/yr, a 95\% ellipse with axes about 2.6 by 3.9 mas/yr, and zero inside the ellipse at $p\approx0.95$. The residual magnitude median is about 1.6 mas/yr, and the point estimate of 0.8 mas/yr sits at the low end of that distribution. The supportable statement is that the baseline residual is consistent with zero to about 2.5--3 mas/yr (95\%), over an overlapping benchmark period. The four-year burst residual is unstable, as the sensitivity sweep shows, and is not used as the headline; earlier interior-only and full-window residual values are illustrative of that instability rather than a robust claim.
 
 \begin{table}[ht]
 \centering
-\caption{Baseline residual after subtracting the known climate+GIA budget from raw OLS 2010--end, with climate-error-propagated 95\% intervals. The benchmark overlaps 2010--2020, so this is not an independent test; early-era rows are omitted; the unstable four-year burst residual is not reported here.}
+\caption{Baseline residual vector after subtracting the known climate+GIA budget from raw OLS 2010--end, with climate-error-propagated component intervals and 95\% ellipse axes. Zero lies inside the ellipse ($p\approx0.95$), so the residual is consistent with zero to about 2.5--3 mas/yr; the benchmark overlaps 2010--2020 and is not an independent test; the unstable four-year burst residual is excluded.}
 \label{tab:residual}
 \small
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrr}
+\begin{tabular}{llrrrr}
 \toprule
-Dataset & Baseline & Observed (mas/yr) & Residual (mas/yr, 95\% CI) & Azimuth ($^{\circ}$) \\
+Dataset & Baseline & Residual $b_x$ (95\% CI) & Residual $b_y$ (95\% CI) & Ellipse axes (mas/yr) & Azimuth ($^{\circ}$) \\
 \midrule
-IERS finals & Raw OLS 2010--2026 & 5.2 & 0.8 (0.35--4.08) & $-83.9$ \\
-JPL EOP2 & Raw OLS 2010--2026 & 5.2 & 0.8 (0.30--4.14) & $-84.3$ \\
-C04/IAU2000A & Raw OLS 2010--2026 & 5.2 & 0.8 (0.28--4.03) & $-83.9$ \\
+IERS finals & Raw OLS 2010--2026 & 0.08 ($-3.32$--$2.22$) & 0.77 ($-2.28$--$2.84$) & 2.62 by 3.87 & $-83.9$ \\
+JPL EOP2 & Raw OLS 2010--2026 & 0.08 ($-3.32$--$2.10$) & 0.77 ($-2.29$--$2.84$) & 2.63 by 3.79 & $-84.3$ \\
+C04/IAU2000A & Raw OLS 2010--2026 & 0.08 ($-3.24$--$2.13$) & 0.77 ($-2.28$--$2.86$) & 2.68 by 3.77 & $-83.9$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -288,14 +297,14 @@ C04/IAU2000A & Raw OLS 2010--2026 & 5.2 & 0.8 (0.28--4.03) & $-83.9$ \\
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig5_residual.pdf}
-\caption{Baseline residual rates from raw OLS 2010--end with climate-error-propagated 95\% intervals. The residual is about 0.8 mas/yr with intervals 0.35--4.08, 0.30--4.14 and 0.28--4.03 mas/yr; about 22\% of replicates fall below 1 mas/yr, so the baseline residual is consistent with zero to about 1 mas/yr. The benchmark overlaps 2010--2020 and is not an independent test. The unstable four-year burst residual is not plotted.}
+\caption{Baseline residual vector ellipses from raw OLS 2010--end with climate-error-propagated uncertainty, IERS finals, JPL EOP2 and C04. Component spreads are about $\pm$ 1.4 and $\pm$ 1.3 mas/yr; 95\% ellipse axes are about 2.6 by 3.9 mas/yr; zero lies inside the ellipse ($p\approx0.95$), so the baseline residual is consistent with zero to about 2.5--3 mas/yr. The benchmark overlaps 2010--2020 and is not an independent test.}
 \label{fig:residual}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig6_residual_trajectory.pdf}
-\caption{Residual rate trajectory in rate space from trailing five-year window rates after subtracting the known climate+GIA vectors, IERS finals; early-era points are dropped as anachronistic. This is illustrative of the scatter, not a headline estimate: the four-year burst residual is unstable and the trajectory does not establish a resolved residual. The known climate values are measured for 2003--2015 and applied as a benchmark; the residual includes unmodelled processes.}
+\caption{Residual rate trajectory in rate space from trailing five-year window rates after subtracting the known climate+GIA vectors, IERS finals; early-era points are dropped as anachronistic. This is illustrative of the scatter, not a headline estimate: short windows are unstable and the trajectory does not establish a resolved residual. The known climate values are measured for 2003--2015 and applied as a benchmark; the residual includes unmodelled processes.}
 \label{fig:residual-trajectory}
 \end{figure}
 
@@ -306,7 +315,7 @@ C04/IAU2000A & Raw OLS 2010--2026 & 5.2 & 0.8 (0.28--4.03) & $-83.9$ \\
 \label{fig:residual-path}
 \end{figure}
 
-The subtraction is a benchmark, not an attribution. The climate reconstruction and GIA trend are measured for 2003--2015 and overlap the baseline period; the residual therefore contains whatever is not captured by those known terms: unmodelled processes. It does not identify a mechanism and does not establish a causal rotational claim. The baseline residual is consistent with zero to about 1 mas/yr over an overlapping benchmark period. Comparison against the IERS Conventions mean-pole model remains the next benchmark and is not performed here.
+The subtraction is a benchmark, not an attribution. The climate reconstruction and GIA trend are measured for 2003--2015 and overlap the baseline period; the residual therefore contains whatever is not captured by those known terms: unmodelled processes. It does not identify a mechanism and does not establish a causal rotational claim. The baseline residual vector is consistent with zero to about 2.5--3 mas/yr (95\%) over an overlapping benchmark period. Comparison against the IERS Conventions mean-pole model remains the next benchmark and is not performed here.
 
 \section{Reproducibility}
 
@@ -343,9 +352,9 @@ The full package --- paper source, PDF, figures, snapshot and script --- is publ
 
 \begin{enumerate}[leftmargin=*]
 \item The epoch boundaries are exploratory: a dataset-specific early window, a common 2010--2020 middle window, and a burst window defined after seeing the episode. They are not pre-registered hypotheses.
-\item Edge truncation inflates the burst estimate: the full-window smoothed rate is 5.9 mas/yr, the interior-only rate is 3.8 mas/yr, but that interior check spans about 2.1 years and is noisy. The point estimates (3.6, 4.6, 5.9) are monotonic; their intervals overlap and the rolling series does not support a trend.
+\item Edge truncation makes the burst estimate unstable: the full-window smoothed rate is 5.9 mas/yr, the interior-only rate is 3.8 mas/yr, but the half-width sweep spans 8.1--2.7 mas/yr and the four-year window cannot fix the rate. The early-middle-burst ordering is not treated as evidence of a trend.
 \item The smoothed series is autocorrelated, so bootstrap intervals are approximate; the bootstrap does not capture the systematic edge bias.
-\item The raw 20.0 mas/yr slope is one example of scatter; trailing raw slopes range 1.5--22.8 mas/yr and read 5.0 at the series end.
+\item The raw 19.9 mas/yr slope is one example of scatter; sliding short-window end times spread over roughly 10 mas/yr, and trailing raw slopes range 1.5--22.8 mas/yr and read 5.0 at the series end.
 \item The three products share one observational base (VLBI, GPS, SLR); identical burst values are consistency, not independent corroboration. Before 1973 the JPL and C04 series include optical astrometry with errors of tens of milliarcseconds.
 \item The rates are estimates of mean-pole drift. They do not establish coupling, mechanism, or any causal rotational claim; that remains interpretation-tier.
 \item The azimuth is signed longitude, east-positive; negative values are west. Reporting magnitudes without the sign loses the direction.
@@ -355,7 +364,7 @@ The full package --- paper source, PDF, figures, snapshot and script --- is publ
 
 \section{Conclusion}
 
-The secular mean-pole drift is small and measurable: roughly 11--16 cm/yr in the early era, 14.3 cm/yr in the common 2010--2020 window, and 18.1 cm/yr in the recent four-year window, with bootstrap intervals spanning 3.6--8.6 mas/yr across products. The point estimates are monotonic, but their intervals overlap and the rolling series does not support a trend. The products share one observational base, so agreement is consistency rather than independent corroboration. Raw and sequential-sinusoid methods inflate the recent rate to 33--62 cm/yr through residual wobble; the centered four-year smoothing reduces it, with the interior-only variant at 11.7 cm/yr (a noisy ~2.1-year check). A whole-record one-basis co-fit with periods in years gives 3.2 mas/yr. The raw 20.0 mas/yr slope is one example of scatter; trailing raw slopes range 1.5--22.8 mas/yr and read 5.0 at the series end. The net displacement since 1962/1973 is 5.94--7.58 m (19.5--24.9 ft), with the recent window adding about 0.74 m in the yearly-mean estimate, which includes the truncated end and is approximate. The snapshot, checksums and script are stated in full so every number can be regenerated.
+The secular mean-pole drift is small and measurable: roughly 11--16 cm/yr in the early era and 14.3 cm/yr in the common 2010--2020 window. The burst centered-width value is 18.1 cm/yr but unstable: the half-width sweep spans 8.1--2.7 mas/yr, harmonic fits over 6--10 years give 6.1--3.7 mas/yr, and longer baselines give raw OLS 4.5 (2000--end), 5.2 (2010--end), 5.1 (2015--end) and calendar-year means 4.0--3.7 (2018--2020--2026). The data support roughly 4--5 mas/yr since about 2000, not a distinct 18 cm/yr episode; the early-middle-burst ordering is not treated as evidence of a trend. The products share one observational base, so agreement is consistency rather than independent corroboration. Raw and sequential-sinusoid methods inflate short-window rates through residual wobble; the raw 19.9 mas/yr is one example of scatter, and sliding short-window end times spread over roughly 10 mas/yr. A whole-record one-basis co-fit with periods in years gives 3.2 mas/yr. The net displacement since 1962/1973 is 5.94--7.59 m (19.5--24.9 ft), with the recent window adding about 0.74 m in the yearly-mean estimate, which includes the truncated end and is approximate. The baseline residual after the known climate+GIA budget is about (0.1, 0.8) mas/yr, with zero inside the 95% ellipse (p≈0.95), consistent with zero to about 2.5--3 mas/yr over an overlapping benchmark period. The snapshot, checksums and script are stated in full so every number can be regenerated.
 
 \begin{thebibliography}{5}
 \bibitem{iers} International Earth Rotation and Reference Systems Service. Earth Orientation Parameter products: finals.all IAU1980, finals2000A IAU2000, and EOP 20u24 C04 IAU2000A. Accessed through the DRIFT dashboard endpoint, 24 November 2026.
