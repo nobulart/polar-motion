@@ -20,7 +20,7 @@
 \maketitle
 
 \begin{abstract}
-The Earth Orientation Parameter record carries two motions that are easily conflated: the Chandler and annual wobble, which returns on itself within metres, and the secular drift of the mean pole, which accumulates. This paper sets out a reproducible method for separating them. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width), and secular drift rates are estimated per epoch by ordinary least squares with block-bootstrap confidence intervals. The early era runs at 3.6--5.0 milliarcseconds per year (11.0--15.6 cm/yr), the middle calendar window 2010--2020 at 4.6 milliarcseconds per year (14.3 cm/yr) in all three products, and the October 2022--November 2026 window at 5.9 milliarcseconds per year (18.1 cm/yr, 7.1 in/yr, 0.59 ft/yr), with bootstrap intervals of 3.6--8.6 (finals), 3.7--8.6 (JPL) and 3.7--8.6 (C04). The intervals overlap across epochs, so the point estimates do not establish a monotonic trend. The products share one observational base, so their agreement is consistency, not independent corroboration. A raw daily-window slope of 20.0 milliarcseconds per year (61.6 cm/yr) is one example of raw scatter: trailing raw slopes range 1.5--22.8 milliarcseconds per year and read 5.0 at the series end. Sequential sinusoid subtraction reads 10.7 milliarcseconds per year (33.1 cm/yr); both are residual-wobble inflation. A whole-record one-basis co-fit with periods converted to years reads 3.2 milliarcseconds per year, consistent with the early-era rate. After subtracting the known climate+GIA benchmark, the burst residual is not distinguishable from zero: the interior-only estimate is 3.2 mas/yr and the full-window 3.8 estimate inherits the truncated edge, with combined uncertainty about $\pm$ 3 mas/yr; Section 7 gives the residual budget and caveats. The net mean-pole displacement is 5.94 m (19.5 ft) since 1973 in IERS finals and 7.18--7.58 m (23.6--24.9 ft) since 1962 in JPL and C04; the recent window adds about 0.74 m in the yearly-mean estimate, which includes the truncated end. The dated data snapshot, checksums, reproduction script and public repository are stated so every number can be regenerated.
+The Earth Orientation Parameter record carries two motions that are easily conflated: the Chandler and annual wobble, which returns on itself within metres, and the secular drift of the mean pole, which accumulates. This paper sets out a reproducible method for separating them. Three EOP products (IERS finals, JPL EOP2, C04) are smoothed with a centered moving average of half-window two years (a four-year boxcar width), and secular drift rates are estimated per epoch by ordinary least squares with block-bootstrap confidence intervals. The early era runs at 3.6--5.0 milliarcseconds per year (11.0--15.6 cm/yr), the middle calendar window 2010--2020 at 4.6 milliarcseconds per year (14.3 cm/yr) in all three products, and the October 2022--November 2026 window at 5.9 milliarcseconds per year (18.1 cm/yr, 7.1 in/yr, 0.59 ft/yr), with bootstrap intervals of 3.6--8.6 (finals), 3.7--8.6 (JPL) and 3.7--8.6 (C04). The intervals overlap across epochs, so the point estimates do not establish a monotonic trend. The products share one observational base, so their agreement is consistency, not independent corroboration. A raw daily-window slope of 20.0 milliarcseconds per year (61.6 cm/yr) is one example of raw scatter: trailing raw slopes range 1.5--22.8 milliarcseconds per year and read 5.0 at the series end. Sequential sinusoid subtraction reads 10.7 milliarcseconds per year (33.1 cm/yr); both are residual-wobble inflation. A whole-record one-basis co-fit with periods converted to years reads 3.2 milliarcseconds per year, consistent with the early-era rate. After subtracting the known climate+GIA benchmark, the interior-only residual estimate is 3.2 mas/yr; the full-window residual is 3.8 mas/yr and inherits the truncated edge; with climate-error propagation only about 12% of replicates fall below 3 mas/yr, so the residual is positive and not resolved to zero; Section 7 gives the residual budget and caveats.
 \end{abstract}
 
 \section{Purpose and scope}
@@ -204,13 +204,14 @@ GIA long-term trend & $3.06$ & $75^{\circ}$W & $0.85^{\circ}$/Myr converted to m
 
 Vector subtraction removes the climate reconstruction and the GIA trend from each observed epoch vector. In the paper's frame the y axis points toward 90$^{\circ}$W, so west directions carry positive $b_y$ and east directions negative $b_y$; the known vectors are converted accordingly. The residual is what remains after both known terms are removed. Early-era residuals are not reported: subtracting the 2003--2015 ice-melt budget from 1973--2006 data measures how different the early period was from the modern budget, not what remains unexplained.
 
-The middle residual is not an independent check. The climate reconstruction was derived from 2003--2015, which overlaps the 2010--2020 window, so a small residual there is circular and does not validate the subtraction. The burst residual is computed on both the full window and the interior-only window that excludes the last two years. The full-window estimate is 3.8 mas/yr and includes the truncated end; the interior-only estimate is 3.2 mas/yr but uses a 2.1-year smoothed window, under two Chandler cycles, and is a noisy check rather than a clean one.
+The middle residual is not an independent check. The climate reconstruction was derived from 2003--2015, which overlaps the 2010--2020 window, so a small residual there is circular and does not validate the subtraction. The burst residual is reported interior-first. The interior-only estimate is 3.2 mas/yr, but it uses a 2.1-year smoothed window, under two Chandler cycles, and has no meaningful bootstrap CI: with 730-day blocks the interior window collapses to one block. The full-window estimate is 3.8 mas/yr and includes the truncated end, so the interior-only value is the more defensible observed number to subtract, though still noisy.
 
-Residual uncertainty is not $\pm$ 1.5 mas/yr. The observed burst rate's block-bootstrap interval (3.6--8.6 mas/yr) contributes about $\pm$ 2.5 mas/yr; the climate magnitude $\pm$ 1.26 and direction $\pm$ 7.6$^{\circ}$ at 4.56 mas/yr contribute about $\pm$ 0.6 mas/yr; the GIA trend is carried as an exact 3.06 mas/yr. Combined uncertainty is about $\pm$ 3 mas/yr or more. The vector bootstrap resamples $b_x$ and $b_y$ separately, subtracts the known vector before taking magnitudes, and reports the residual magnitude interval; it avoids the upward bias of bootstrapping the hypot of noisy components directly.
+Residual uncertainty is not $\pm$ 1.5 mas/yr. The observed burst rate's block-bootstrap interval (3.6--8.6 mas/yr, 95\%) contributes about $\pm$ 2.5 mas/yr. The climate magnitude $\pm$ 1.26 and direction $\pm$ 7.6$^{\circ}$ at 4.56 mas/yr combine in quadrature to about $\pm$ 1.4 mas/yr for the climate vector; quadrature with the observed $\pm$ 2.5 gives about $\pm$ 2.9, rounded to $\pm$ 3 mas/yr or more. The GIA trend is carried as an exact 3.06 mas/yr. Bootstrap intervals are 95\%; the literature $\pm$ values are treated as 1$\sigma$ because the accessible Adhikari and Ivins text does not state a confidence level. The climate-error-propagated bootstrap draws climate magnitude and direction from normal distributions per replicate, subtracts the known vector before taking magnitudes, and reports both the residual magnitude interval and the 2D ellipse axes; this avoids the upward bias of bootstrapping the hypot of noisy components near zero.
 
 \begin{table}[ht]
 \centering
-\caption{Residual secular vectors after subtracting the known climate reconstruction and GIA trend, with vector-bootstrap 95\% intervals. Early-era rows are omitted as anachronistic; the middle residual is circular because the climate reconstruction overlaps 2010--2020; combined residual uncertainty is about $\pm$ 3 mas/yr or more.}
+\caption{Residual secular vectors after subtracting the known climate reconstruction and GIA trend, with climate-error-propagated 95\% intervals. Burst interior rows come first; their CI is not meaningful because the 2.1-year window collapses to one 730-day block. The full-window intervals include the climate vector uncertainty and the truncated edge; the middle residual is circular because the climate reconstruction overlaps 2010--2020; early-era rows are omitted as anachronistic.}
+
 \label{tab:residual}
 \small
 \resizebox{\textwidth}{!}{%
@@ -218,15 +219,15 @@ Residual uncertainty is not $\pm$ 1.5 mas/yr. The observed burst rate's block-bo
 \toprule
 Dataset & Epoch & Observed (mas/yr) & Residual (mas/yr, 95\% CI) & Residual azimuth ($^{\circ}$) \\
 \midrule
-IERS finals & Middle (2010--2020) & 4.6 & 1.4 (0.3--4.2) & $-118.8$ \\
-IERS finals & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (2.1--7.2) & $-106.3$ \\
-IERS finals & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (2.8--3.4) & $-138.2$ \\
-JPL EOP2 & Middle (2010--2020) & 4.6 & 1.4 (0.2--4.3) & $-118.9$ \\
-JPL EOP2 & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (2.3--6.9) & $-106.4$ \\
-JPL EOP2 & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (2.8--3.4) & $-138.3$ \\
-C04/IAU2000A & Middle (2010--2020) & 4.6 & 1.4 (0.3--4.3) & $-118.7$ \\
-C04/IAU2000A & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (2.3--7.1) & $-106.4$ \\
-C04/IAU2000A & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (2.8--3.4) & $-138.3$ \\
+IERS finals & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (CI not meaningful) & $-138.2$ \\
+IERS finals & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (1.9--7.7) & $-106.3$ \\
+IERS finals & Middle (2010--2020) & 4.6 & 1.4 (0.4--5.0) & $-118.8$ \\
+JPL EOP2 & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (CI not meaningful) & $-138.3$ \\
+JPL EOP2 & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (1.9--7.8) & $-106.4$ \\
+JPL EOP2 & Middle (2010--2020) & 4.6 & 1.4 (0.5--5.1) & $-118.9$ \\
+C04/IAU2000A & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (CI not meaningful) & $-138.3$ \\
+C04/IAU2000A & Burst full (Oct 2022--Nov 2026) & 5.9 & 3.8 (1.8--7.7) & $-106.4$ \\
+C04/IAU2000A & Middle (2010--2020) & 4.6 & 1.4 (0.4--5.1) & $-118.7$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -234,14 +235,14 @@ C04/IAU2000A & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (2.8--3.4) & $-13
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig5_residual.pdf}
-\caption{Residual rates with vector-bootstrap 95\% intervals after subtracting the known climate+GIA vectors. Early era is omitted because subtracting the 2003--2015 budget from 1973--2006 measures difference from the modern budget, not unexplained motion. The middle residual is circular because the climate reconstruction overlaps 2010--2020. The burst full-window estimate is 3.8 mas/yr (CI 2.1--7.2) and includes the truncated edge; the interior-only estimate is 3.2 mas/yr (CI 2.8--3.4) but uses a 2.1-year smoothed window and is noisy. Combined uncertainty is about $\pm$ 3 mas/yr or more; the burst residual is not distinguishable from zero. Benchmark subtraction only; residual contains unmodelled processes.}
+\caption{Residual rates with climate-error-propagated 95\% intervals after subtracting the known climate+GIA vectors. Burst interior-only comes first: its CI is not meaningful because the 2.1-year window collapses to one 730-day block. The burst full-window estimate is 3.8 mas/yr (CI 1.9--7.7) and includes the truncated edge; the middle estimate is 1.4 mas/yr (CI 0.4--5.0) but is circular because the climate reconstruction overlaps 2010--2020. Early era is omitted as anachronistic. Climate-error propagation gives only about 12\% of burst replicates below 3 mas/yr and fewer than 1\% below 1 mas/yr; the residual ellipse axes are about 3.3 by 4.5 mas/yr. The residual is positive and not resolved to zero. Benchmark subtraction only; residual contains unmodelled processes.}
 \label{fig:residual}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig6_residual_trajectory.pdf}
-\caption{Residual rate trajectory in rate space after subtracting the known climate+GIA vectors from trailing five-year window rates, IERS finals. This is not a cumulative displacement ramp: each point is a residual rate vector (mas/yr), so the scale stays comparable to the mean-pole rates rather than accumulating a 53-year known ramp. The known climate values are measured for 2003--2015 and applied as a benchmark; the residual includes unmodelled processes and is approximate.}
+\caption{Residual rate trajectory in rate space after subtracting the known climate+GIA vectors from trailing five-year window rates, IERS finals. Early-era points are dropped as anachronistic; only 2003--2026 points are shown. This is not a cumulative displacement ramp: each point is a residual rate vector (mas/yr), so the scale stays comparable to the mean-pole rates rather than accumulating a 53-year known ramp. The known climate values are measured for 2003--2015 and applied as a benchmark; the residual includes unmodelled processes and is approximate.}
 \label{fig:residual-trajectory}
 \end{figure}
 
@@ -252,7 +253,7 @@ C04/IAU2000A & Burst interior (excludes last 2 yr) & 3.8 & 3.2 (2.8--3.4) & $-13
 \label{fig:residual-path}
 \end{figure}
 
-The subtraction is a benchmark, not an attribution. The climate reconstruction and GIA trend are measured for 2003--2015 and are applied to the later burst window without a period-matched model; the residual therefore contains whatever is not captured by those known terms: unmodelled processes. It does not identify a mechanism and does not establish a causal rotational claim. The residual is a statement about what the known budget leaves unexplained, with combined uncertainty about $\pm$ 3 mas/yr or more.
+The subtraction is a benchmark, not an attribution. The climate reconstruction and GIA trend are measured for 2003--2015 and are applied to the later burst window without a period-matched model; the residual therefore contains whatever is not captured by those known terms: unmodelled processes. It does not identify a mechanism and does not establish a causal rotational claim. The residual is a statement about what the known budget leaves unexplained, with combined uncertainty about $\pm$ 3 mas/yr or more. Comparison against the IERS Conventions mean-pole model remains the next benchmark and is not performed here.
 
 \section{Reproducibility}
 
